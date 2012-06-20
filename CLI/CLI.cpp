@@ -793,7 +793,39 @@ int stats(int argc, char** argv, ostream& os)
 	return SUCCESS;
 }
 
+int handover(int argc, char** argv, ostream& os, istream& is)
+{
+	unsigned handoverReference;
 
+	if (argc!=3) return BAD_NUM_ARGS;
+	handoverReference = atoi(argv[2]);
+	size_t count = gTransactionTable.dump(os);
+	os << endl << count << " transactions in table" << endl;
+	
+	GSM::LogicalChannel *DCCH = gTransactionTable.findChannel(argv[1]);//	look by IMSI
+	if(DCCH==NULL) {
+		os << "channel with IMSI not found " << argv[1];
+		return BAD_NUM_ARGS;
+	} // DCCH - chan to send HO COMMAND
+	
+	// now allocate the target channel for HO
+	GSM::TCHFACCHLogicalChannel *TCH = NULL;
+	TCH = gBTS.getTCH();
+	if (TCH==NULL) {
+		os << "unable to allocate target channel ";
+		return  NOT_FOUND;
+	}
+	os << "target channel is" << TCH->channelDescription();
+	os << "target timeslot is" << TCH->TN();
+	gTRX.ARFCN()->handoverOn(TCH->TN(),handoverReference);
+	
+	DCCH->send(GSM::L3HandoverCommand(TCH->channelDescription(),handoverReference));
+	
+	sleep(2);
+	gTRX.ARFCN()->handoverOff(TCH->TN());
+	
+	return SUCCESS;
+}
 //@} // CLI commands
 
 
@@ -826,6 +858,7 @@ void Parser::addCommands()
 	addCommand("endcall", endcall,"trans# -- terminate the given transaction");
 	addCommand("crashme", crashme, "force crash of OpenBTS for testing purposes");
 	addCommand("stats", stats,"[patt] -- print all, or selected, performance statistics");
+        addCommand("handover", handover,"[IMSI HandoverReference]-- try to perform handover to another timeslot inside the same BTS");
 }
 
 
