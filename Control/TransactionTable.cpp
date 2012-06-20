@@ -807,6 +807,12 @@ bool TransactionEntry::sendINFOAndWaitForOK(unsigned info)
 	return mSIP.sendINFOAndWaitForOK(info,&mLock);
 }
 
+void TransactionEntry::sendINFO(const char * measurements)
+{
+	ScopedLock lock(mLock);
+	mSIP.sendINFO(measurements);
+}
+
 void TransactionEntry::SIPUser(const char* IMSI)
 {
 	if (mRemoved) throw RemovedTransaction(mID);
@@ -1041,6 +1047,7 @@ TransactionEntry* TransactionTable::find(GSM::TypeAndOffset desc)
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
 		if (itr->second->deadOrRemoved()) continue;
 		const GSM::LogicalChannel* thisChan = itr->second->channel();
+
 		if (thisChan->typeAndOffset()!=desc) continue;
 		return itr->second;
 	}
