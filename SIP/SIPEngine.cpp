@@ -550,6 +550,7 @@ SIPState  SIPEngine::MOCCheckForOK(Mutex *lock)
 	try {
 		msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.A"),lock);
 	}
+
 	catch (SIPTimeout& e) { 
 		LOG(DEBUG) << "timeout";
 		//if we got a 100 TRYING (SIP::Proceeding)
@@ -1563,4 +1564,19 @@ bool SIPEngine::sameINVITE(osip_message_t * msg){
 	return n1==n2;
 }
 
+void SIPEngine::sendINFO(const char * wInfo)
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+
+	char tmp[50];
+	make_branch(tmp);
+	mViaBranch = tmp;
+	mCSeq++;
+	osip_message_t * info = sip_info( wInfo,
+		mRemoteUsername.c_str(), mRTPPort, mSIPUsername.c_str(), 
+		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
+		mMyTag.c_str(), mViaBranch.c_str(), mCallIDHeader, mCSeq); 
+	gSIPInterface.write(&mProxyAddr,info);
+	osip_message_free(info);
+};
 // vim: ts=4 sw=4

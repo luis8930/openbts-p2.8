@@ -59,6 +59,8 @@ osip_message_t * sip_error( osip_message_t * invite,  const char * host, const c
 
 osip_message_t * sip_info(unsigned info, const char *dialed_number, short rtp_port,const char * sip_username, short local_port, const char * local_ip, const char * proxy_ip, const char * from_tag, const char * via_branch, const osip_call_id_t* call_id_header, int cseq);
 
+osip_message_t * sip_info(const char * measurements, const char *dialed_number, short rtp_port,const char * sip_username, short local_port, const char * local_ip, const char * proxy_ip, const char * from_tag, const char * via_branch, const osip_call_id_t* call_id_header, int cseq);
+
 osip_message_t * sip_b_okay( osip_message_t * bye  );
 
 osip_message_t * sip_trying( osip_message_t * invite, const char * sip_username, const char * local_ip);
