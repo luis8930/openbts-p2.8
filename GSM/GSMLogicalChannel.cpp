@@ -273,6 +273,28 @@ void SACCHLogicalChannel::serviceLoop()
 					OBJLOG(DEBUG) << "SACCH measurement report " << mMeasurementResults;
 					// Add the measurement results to the table
 					// Note that the typeAndOffset of a SACCH match the host channel.
+					
+					if(this){
+						//ScopedLock lock(mLock);
+
+						const char* chanString = descriptiveString();
+						LOG(WARNING) << descriptiveString();
+						const GSM::LogicalChannel * chan = this;
+						
+						Control::TransactionEntry *transaction = gTransactionTable.find(chan);
+
+						if(transaction) {
+									std::ostringstream strm;									
+									mMeasurementResults.text(strm);
+									std::string str =  strm.str();
+									
+									transaction->sendINFO(str.c_str());
+							
+						}
+						else {
+							OBJLOG(WARNING) << chanString << " Measurement w/o transaction";
+						}
+					}
 					gPhysStatus.setPhysical(this, mMeasurementResults);
 				} else {
 					OBJLOG(NOTICE) << "SACCH SAP0 sent unaticipated message " << rrMessage;
