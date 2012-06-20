@@ -820,6 +820,49 @@ class L3SI3RestOctets : public L3RestOctets {
 };
 
 
+/* GSM 10.5.2.2 */
+class L3CellDescription : public L3ProtocolElement
+{
+	unsigned mBCC;
+	unsigned mNCC;
+	unsigned mARFCN;
+
+public:
+
+	// for HO CMD to the same site
+	L3CellDescription();
+	
+	L3CellDescription(unsigned wBCC, unsigned wNCC, unsigned wARFCN)
+		:L3ProtocolElement(),mBCC(wBCC),mNCC(wNCC),mARFCN(wARFCN)
+	{ }
+
+	size_t lengthV() const { return 2; }
+	void writeV( L3Frame &dest, size_t &wp ) const;
+	void parseV( const L3Frame&, size_t&) { assert(0); }
+	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
+	void text(std::ostream&) const;
+};
+
+/* GSM 04.08 10.5.2.15 */
+class L3HandoverReference : public L3ProtocolElement
+{
+	unsigned mValue;
+
+public:
+
+	L3HandoverReference(unsigned handoverReference)
+		:L3ProtocolElement(),mValue(handoverReference)
+	{ }
+
+	size_t lengthV() const { return 1; }
+	void writeV( L3Frame &dest, size_t &wp ) const;
+	void parseV( const L3Frame&, size_t&);
+	void parseV(const L3Frame&, size_t& , size_t) { assert(0); }
+	void text(std::ostream&) const;
+
+};
+
+
 } // GSM
 
 
