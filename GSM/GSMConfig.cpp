@@ -343,6 +343,15 @@ bool GSMConfig::hold() const
 	return mHold;
 }
 
+TCHFACCHLogicalChannel* GSMConfig::getTCHByTN(unsigned TN){
+	TCHList::const_iterator tChanItr = TCHPool().begin();
+	while (tChanItr != TCHPool().end()) {
+		TCHFACCHLogicalChannel* tChan = *tChanItr;
+		if (tChan->TN() == TN) return tChan;
+		++tChanItr;
+	}
+	return NULL;
+}
 
 
 // vim: ts=4 sw=4

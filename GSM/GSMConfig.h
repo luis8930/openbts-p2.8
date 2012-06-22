@@ -278,6 +278,8 @@ class GSMConfig {
 
 	/** Get a handle to the power manager. */
 	PowerManager& powerManager() { return mPowerManager; }
+
+	TCHFACCHLogicalChannel* getTCHByTN(unsigned TN);
 };
 
 
