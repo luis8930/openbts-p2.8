@@ -31,6 +31,7 @@
 #include "GSMConfig.h"
 #include "GSMTDMA.h"
 #include "GSMTAPDump.h"
+#include "GSMLogicalChannel.h"
 #include <ControlCommon.h>
 #include <Globals.h>
 #include <TRXManager.h>
