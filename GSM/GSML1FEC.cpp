@@ -1,6 +1,7 @@
 /*
 * Copyright 2008-2010 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
+* Copyright 2012 Dmitri Soloviev <dmi3sol@gmail.com> for Fairwaves, Inc
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -1095,17 +1096,18 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 		
 		unsigned HR;
 		if(decodeRACHBurst(inBurst, mParityHA, mUHA, mDHA, HR)){
-			OBJLOG(INFO) <<"Some Handover Access Detected at "<< TN() <<", HandoverReference=" << HR <<"\n";
+			OBJLOG(INFO) <<"Handover Access Detected at "<< TN() <<", HandoverReference=" << HR <<"\n";
 			if(HR == gTRX.ARFCN()->getHandoverReference( TN() )){
 				OBJLOG(INFO) <<"Handover Reference ok.. " << HR << "\n";
 				
-				GSM::TCHFACCHLogicalChannel * facch = gBTS.getTCHByTN(TN());
-				OBJLOG(INFO) << "FACCH for " << facch->channelDescription();
 				int initialTA = (int)(inBurst.timingError() + 0.5F);
 				if (initialTA<0) initialTA=0;
 				if (initialTA>62) initialTA=62;
+				
+				HandoverEntry *he = gTransactionTable.find_handover(TN());
+				he->HandoverAccessDetected(L3PhysicalInformation(initialTA));
+				
 				facch->send(L3PhysicalInformation(initialTA),UNIT_DATA,0);
-				gTRX.ARFCN()->handoverOff(TN());
 			}
 			else OBJLOG(INFO) <<"Wrong Handover Reference " << HR << "\n";
 		return false;}

@@ -48,6 +48,8 @@ struct sqlite3;
 /**@namespace Control This namepace is for use by the control layer. */
 namespace Control {
 
+class HandoverEntry;
+
 typedef std::map<std::string, GSM::Z100Timer> TimerTable;
 
 
@@ -92,6 +94,8 @@ class TransactionEntry {
 	GSM::LogicalChannel *mChannel;			///< current channel of the transaction
 
 	bool mTerminationRequested;
+	
+	HandoverEntry *mHandoverEntry;
 
 	public:
 
@@ -131,7 +135,12 @@ class TransactionEntry {
 		const GSM::L3MobileIdentity& wSubscriber,
 		GSM::LogicalChannel* wChannel);
 
-
+	/** Form for "handover-originated" calls */
+	TransactionEntry(const char* proxy,
+		const GSM::L3MobileIdentity& wSubscriber,
+		GSM::LogicalChannel* wChannel,
+		const HandoverEntry* wHandoverEntry);
+	
 	/** Delete the database entry upon destruction. */
 	~TransactionEntry();
 
@@ -164,6 +173,8 @@ class TransactionEntry {
 	GSM::CallState GSMState() const { ScopedLock lock(mLock); return mGSMState; }
 	void GSMState(GSM::CallState wState);
 
+	const HandoverEntry * handoverEntry() const { return mHandoverEntry; }
+	HandoverEntry * handoverEntry() { return mHandoverEntry; }
 	//@}
 
 
@@ -235,6 +246,17 @@ class TransactionEntry {
 
 	const std::string SIPCallID() const { ScopedLock lock(mLock); return mSIP.callID(); }
 
+	
+	/** acknowledge handover initiation; publish handoverReference + cellId + chanId */
+	SIP::SIPState HOCSendHandhoverAck(unsigned handoverReference, unsigned BCC, unsigned NCC, unsigned C0, char *channelDescription);
+	
+	/** drop handover-originated "call setup" */
+	SIP::SIPState HOCTimeout();
+	
+	/** complete handover-originated "call setup" and provide rtp endpoint*/
+	SIP::SIPState HOCSendHandoverComplete(short rtpPort);
+	
+	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)
 		{ ScopedLock lock(mLock); mSIP.saveINVITE(invite,local); }
@@ -343,6 +365,9 @@ class TransactionTable {
 	*/
 	TransactionEntry* findLongestCall();
 
+	/** find handover-originated transaction by assigned channel */
+	TransactionEntry* find_handover(unsigned wTN);
+	
 	/**
 		Return the availability of this particular RTP port
 		@return True if Port is available, False otherwise
