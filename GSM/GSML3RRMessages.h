@@ -3,6 +3,7 @@
 /*
 * Copyright 2008, 2010 Free Software Foundation, Inc.
 * Copyright 2011 Kestrel Signal Processing, Inc.
+* Copyright 2012 Dmitri Soloviev <dmi3sol@gmail.com> for Fairwaves, Inc
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -698,20 +699,20 @@ class L3PhysicalInformation : public L3RRMessageNRO {
 
 private:
 
-        L3TimingAdvance mTimingAdvance;     // 10.5.2.40
+	L3TimingAdvance mTimingAdvance;     // 10.5.2.40
 
 public:
 
-        L3PhysicalInformation(const L3TimingAdvance& wTimingAdvance)
-                :L3RRMessageNRO(),
-                mTimingAdvance(wTimingAdvance)
-        {  }
+	L3PhysicalInformation(const L3TimingAdvance& wTimingAdvance)
+		:L3RRMessageNRO(),
+		mTimingAdvance(wTimingAdvance)
+	{  }
 
-        int MTI() const { return (int) PhysicalInformation; }
+	int MTI() const { return (int) PhysicalInformation; }
   
-        size_t l2BodyLength() const;
-        void writeBody( L3Frame &dest, size_t &wp ) const;
-        void text(std::ostream&) const;
+	size_t l2BodyLength() const;
+	void writeBody( L3Frame &dest, size_t &wp ) const;
+	void text(std::ostream&) const;
 };
 
 /** GSM 04.08 9.1.15 */
@@ -719,32 +720,32 @@ class L3HandoverCommand : public L3RRMessageNRO {
 
 private:
 
-        L3CellDescription mCellDescription;     // 10.5.2.2
-        L3ChannelDescription mChannelDescription;
+	L3CellDescription mCellDescription;	// 10.5.2.2
+	L3ChannelDescription mChannelDescription;
 
-        L3HandoverReference mHandoverReference; // 10.5.2.15
-        L3PowerCommand	mPowerCommand;  // cause in 10.5.2.28a HandoverAccess bit is (re)set to Mandatory,
-                                        // it becomes the same as 10.5.2.28
-        // Synchronization Indication is absent => non-synchronized
+	L3HandoverReference mHandoverReference;	// 10.5.2.15
+	L3PowerCommand	mPowerCommand;		// cause in 10.5.2.28a HandoverAccess bit is (re)set to Mandatory,
+						// it becomes the same as 10.5.2.28
+	// Synchronization Indication is absent => non-synchronized
 
 public:
 
-        L3HandoverCommand(const L3CellDescription& wCellDescription, 
-						const L3ChannelDescription& wChannelDescription,
-                        const L3HandoverReference& wHandoverReference )
-                :L3RRMessageNRO(),
-                mChannelDescription(wChannelDescription),
-				mCellDescription(wCellDescription),
-				mHandoverReference(wHandoverReference)
-        {}
+	L3HandoverCommand(const L3CellDescription& wCellDescription, 
+			const L3ChannelDescription& wChannelDescription,
+			const L3HandoverReference& wHandoverReference )
+		:L3RRMessageNRO(),
+			mChannelDescription(wChannelDescription),
+			mCellDescription(wCellDescription),
+			mHandoverReference(wHandoverReference)
+		{}
 
-		// for evaluating: to the given channel inside the same sell
-		        L3HandoverCommand(const L3ChannelDescription& wChannelDescription,
-                        const L3HandoverReference& wHandoverReference )
-                :L3RRMessageNRO(),
-				mChannelDescription(wChannelDescription),
-				mHandoverReference(wHandoverReference)
-        {}
+	/** for evaluating: to the given channel inside the same sell */
+	L3HandoverCommand(const L3ChannelDescription& wChannelDescription,
+			const L3HandoverReference& wHandoverReference )
+		:L3RRMessageNRO(),
+			mChannelDescription(wChannelDescription),
+			mHandoverReference(wHandoverReference)
+		{}
 
 
         int MTI() const { return (int) HandoverCommand; }

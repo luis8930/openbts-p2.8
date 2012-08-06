@@ -3,6 +3,7 @@
 * Copyright 2008-2011 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
 * Copyright 2011 Range Networks, Inc.
+* Copyright 2012 Dmitri Soloviev <dmi3sol@gmail.com> for Fairwaves, Inc
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -52,6 +53,8 @@ void PagingResponseHandler(const GSM::L3PagingResponse*, GSM::LogicalChannel*);
 /** Find and compelte the in-process transaction associated with a completed assignment. */
 void AssignmentCompleteHandler(const GSM::L3AssignmentComplete*, GSM::TCHFACCHLogicalChannel*);
 
+/** Find and compelte the in-process transaction associated with a successful handover. */
+void HandoverCompleteHandler(const GSM::L3HandoverComplete*, GSM::LogicalChannel*);
 
 /**@ Access Grant mechanisms */
 //@{

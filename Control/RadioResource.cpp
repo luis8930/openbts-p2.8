@@ -4,6 +4,7 @@
 * Copyright 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
 * Copyright 2011 Range Networks, Inc.
+* Copyright 2012 Dmitri Soloviev <dmi3sol@gmail.com> for Fairwaves, Inc
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -360,7 +361,27 @@ void Control::AssignmentCompleteHandler(const L3AssignmentComplete *confirm, TCH
 
 
 
+void Control::HandoverCompleteHandler(const GSM::L3HandoverComplete *confirm, GSM::LogicalChannel *DCCH){
+	assert(confirm);
+	assert(DCCH);
+	LOG(INFO) << *confirm;
+	
+	TransactionEntry* transaction = gTransactionTable.find_handover(DCCH->TN()); // as there is nothing valuable inside the message
+	HandoverEntry* handoverEntry = transaction->getHandoverEntry();
+	
+	// provide transaction with L3TI
+	unsigned L3TI = confirm->TI() | 0x08;
+	transaction->L3TI(L3TI);
+	
+	// remove transaction from Handover thread
+	handoverEntry->HandoverCompleteDetected();	// it will also do SIP Register
+	
 
+	
+	? RTP/200 ok .. here or later?
+
+	// continue as if it was a legacy call
+}
 
 
 
