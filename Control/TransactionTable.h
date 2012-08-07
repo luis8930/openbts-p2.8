@@ -144,11 +144,23 @@ class TransactionEntry {
 	TransactionEntry(const char* proxy,
 		const GSM::L3MobileIdentity& wSubscriber,
 		GSM::LogicalChannel* wChannel,
-		const HandoverEntry* wHandoverEntry);
+		const GSM::L3CMServiceType& wService);
+	void addHandoverEntry(const HandoverEntry* wHandoverEntry);
 	
 	/** Delete the database entry upon destruction. */
 	~TransactionEntry();
 
+	/** handover-related stuff */
+	void HOCSendHandhoverAck(unsigned wHandoverReference, 
+		unsigned wBCC, unsigned wNCC, unsigned wC0,
+		char *wChannelDescription);
+
+	void HOCTimeout();
+	
+	void HOCSuccessfulHandover(short wRtpPort, unsigned wCodec);
+		
+	HandoverEntry *find_handover(unsigned wTN);
+	
 	/**@name Accessors. */
 	//@{
 	unsigned L3TI() const;
