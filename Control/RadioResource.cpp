@@ -363,12 +363,14 @@ void Control::HandoverCompleteHandler(const GSM::L3HandoverComplete *confirm, GS
 	unsigned L3TI = confirm->TI() | 0x08;
 	transaction->L3TI(L3TI);
 	
-	// remove transaction from Handover thread
-	handoverEntry->HandoverCompleteDetected();	// it will also do SIP Register
 	
-
 	
 	? RTP/200 ok .. here or later?
+		
+	// remove transaction from Handover thread
+	handoverEntry->HandoverCompleteDetected(HOCSuccessfulHandover(short rtpPort, unsigned codec));	// it will also do SIP Register
+
+	
 
 	// continue as if it was a legacy call
 }

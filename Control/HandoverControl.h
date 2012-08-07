@@ -59,14 +59,14 @@ class HandoverEntry{
 	 * turn RACH decoding off, start sending Physical Info */
 	void HandoverAccessDetected(const GSM::L3PhysicalInformation wPhysicalInformation);
 	
-	/** called from gHandover thread;
+	/** called from Handover thread;
 	 * returns TRUE if Physical Information sent */
 	bool T3105Tick();
 	
 	/** must be called from
 	 * file DCCHDispatch.cpp
 	 * stop sending Physical Info, T3103 timer, try to perform SIP Register */
-	void HandoverCompleteDetected();
+	void HandoverCompleteDetected(short wRtpPort, unsigned wCodec);
 	
 	/** true if performed (or attempted) */
 	bool SipRegister();
@@ -82,12 +82,15 @@ class Handover{
 	public:
 	
 	Handover()
-		:mRunning(false), mT3105(gConfig.getNum("GSM.Handover.T3105"))
+		:mRunning(false), mT3105(gConfig.getNum("GSM.Handover.T3105")), mHandoverReference(1)
 	{}
 	
 	void start();
 
-
+	unsigned allocateHandoverReference();
+	
+	void showHandovers();
+	
 	private:
 
 	HandoverEntryList mHandovers;				///< List of ID's to be paged.
@@ -95,6 +98,8 @@ class Handover{
 	Signal mHandoverSignal;						///< signal to wake the paging loop
 	Thread mHandoverThread;					///< Thread for the paging loop.
 	volatile bool mRunning;
+	
+	unsigned mHandoverReference;
 	
 	/** !! Attention: in usec needed here */
 	unsigned mT3105;	
@@ -104,6 +109,8 @@ class Handover{
 	void handoverHandler();
 	
 	void addHandover(HandoverEntry *he);
+	
+	unsigned 
 };
 
 void *HandoverServiceLoop(Handover *);

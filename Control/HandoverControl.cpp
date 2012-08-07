@@ -33,7 +33,7 @@ void HandoverEntry::HandoverEntry(const TransactionEntry& wTransaction, const GS
 	mT3103 = Z100Timer(gConfig.getNum("GSM.Handover.T3103"));
 	mT3103.set();	// Limit transaction lifetime
 	
-	gHandover.addHandover(this);
+	gBTS.handover().addHandover(this);
 }
 
 
@@ -67,10 +67,12 @@ bool HandoverEntry::T3105Tick(){
 
 
 
-void HandoverEntry::HandoverCompleteDetected(){
+void HandoverEntry::HandoverCompleteDetected(short wRtpPort, unsigned wCodec){
 	mGotHA = false;
 	mGotHComplete = true;
 	mT3103.stop();
+	
+	mTransaction->HOCSuccessfulHandover(short wRtpPort, unsigned wCodec);
 }
 
 
@@ -196,6 +198,39 @@ void Handover::handoverHandler(){
 
 
 
+
+unsigned Handover::allocateHandoverReference(){
+	for(int attempts=0;attempts<255;attempts++){
+		mHandoverReference++; 
+		if(mHandoverReference>255) mHandoverRegference = 1;
+		
+		bool Empty = true;
+		
+		HandoverEntryList::iterator lp = mHandovers.begin();
+		while (lp != mHandovers.end()) {
+			if(lp->handoverReference() == mHandoverReference) {
+				Empty = false;
+				break;
+			}
+			lp++;
+		}
+		
+		if(Empty) return mHandoverReference;
+	}
+	LOG(ERROR) << "unable to allocate Handover Reference";
+	return 0;
+}
+
+
+
+
+void Handover::showHandovers(){
+	HandoverEntryList::iterator lp = mHandovers.begin();
+	while (lp != mHandovers.end()) {
+		LOG(INFO) << "ref="lp->handoverReference() << ", IMSI=" << lp->
+		lp++;
+	}
+}
 
 void* Control::HandoverServiceLoop(Handover * handover)
 {

@@ -571,6 +571,24 @@ bool TransactionEntry::terminationRequested()
 }
 
 
+// functions for Handover-Originated transactions
+void TransactionEntry::TransactionEntry(const char* proxy,
+		const GSM::L3MobileIdentity& wSubscriber,
+		GSM::LogicalChannel* wChannel,
+		const GSM::L3CMServiceType& wService){
+		
+}
+
+
+void TransactionEntry::addHandoverEntry(const HandoverEntry& wHandoverEntry){
+	mHandoverEntry(wHandoverEntry);
+}
+
+void TransactionEntry::HOCSendHandhoverAck(unsigned wHandoverReference, 
+		unsigned wBCC, unsigned wNCC, unsigned wC0,
+		char *wChannelDescription);
+
+
 
 void TransactionTable::init()
 	// This assumes the main application uses sdevrandom.

@@ -57,6 +57,8 @@ void GSMConfig::start()
 	mPager.start();
 	// Do not call this until AGCHs are installed.
 	mAccessGrantThread.start(Control::AccessGrantServiceLoop,NULL);
+	
+	mHandover.start();
 }
 
 

@@ -731,35 +731,53 @@ int noise(int argc, char** argv, ostream& os, istream& is)
 
 int handover(int argc, char** argv, ostream& os, istream& is)
 {
-	unsigned handoverReference;
+	if (argc!=2) return BAD_NUM_ARGS;
 
-	if (argc!=3) return BAD_NUM_ARGS;
-	handoverReference = atoi(argv[2]);
 	size_t count = gTransactionTable.dump(os);
 	os << endl << count << " transactions in table" << endl;
+
 	
-	GSM::LogicalChannel *DCCH = gTransactionTable.findChannel(argv[1]);//	look by IMSI
-	if(DCCH==NULL) {
-		os << "channel with IMSI not found " << argv[1];
-		return BAD_NUM_ARGS;
-	} // DCCH - chan to send HO COMMAND
+	// activities for Target side, code will migrate to
+	// SIPInterface::checkInvite()
 	
-	// now allocate the target channel for HO
+	// 1) allocate Handover Reference
+	unsigned handoverReference = gBTS.handover().allocateHandoverReference();
+	os << "HandoverReference is " << handoverReference;
+	
+	// 2) allocate a channel
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
 	TCH = gBTS.getTCH();
 	if (TCH==NULL) {
 		os << "unable to allocate target channel ";
 		return  NOT_FOUND;
 	}
-	os << "target channel is" << TCH->channelDescription();
-	os << "target timeslot is" << TCH->TN();
-	gTRX.ARFCN()->handoverOn(TCH->TN(),handoverReference);
+	// 3) create a transaction
+	TransactionEntry *transaction = new TransactionEntry(gConfig.getStr("SIP.Proxy.SMS").c_str(),argv[1],TCH,L3CMServiceType::HandoverOriginatedCall);
 	
+	// 4) start handover
+	HandoverEntry handover = new HandoverEntry(*transaction,TCH,handoverReference);
+	transaction->addHandoverEntry(&handover);
+	
+	// this is just to verify the content to be sent,
+	// copypasted from HandoverEntry constructor
+	os << "Cell:" << 
+		" BCC= " << gConfig.getNum("GSM.Identity.BSIC.BCC") << 
+		", NCC=" << gConfig.getNum("GSM.Identity.BSIC.NCC") <<
+		", C0=" << gConfig.getNum("GSM.Radio.C0");
+	os << "Channel: " << TCH->channelDescription();
+	
+	
+	
+	// emulating activities at the Donor side
+	GSM::LogicalChannel *DCCH = gTransactionTable.findChannel(argv[1]);//	look by IMSI
+	if(DCCH==NULL) {
+		os << "channel with IMSI not found " << argv[1];
+		return BAD_NUM_ARGS;
+	} // DCCH - channel to send HO COMMAND
+
+	// must be replaced with real-life Handover Command, with CellID + ChannelID
 	DCCH->send(GSM::L3HandoverCommand(TCH->channelDescription(),handoverReference));
-	
-	sleep(2);
-	gTRX.ARFCN()->handoverOff(TCH->TN());
-	
+	sleep 2;
 	return SUCCESS;
 }
 //@} // CLI commands
@@ -792,7 +810,7 @@ void Parser::addCommands()
 	addCommand("unconfig", unconfig, "key -- remove a config value");
 	addCommand("notices", notices, "-- show startup copyright and legal notices");
 	addCommand("endcall", endcall,"trans# -- terminate the given transaction");
-        addCommand("handover", handover,"[IMSI HandoverReference]-- try to perform handover to another timeslot inside the same BTS");
+        addCommand("handover", handover,"[IMSI]-- try to perform handover to another timeslot inside the same BTS");
 }
 
 
