@@ -38,6 +38,10 @@ class Time;
 class TCHFACCHLogicalChannel;
 class L3PagingResponse;
 class L3AssignmentComplete;
+class TCHFACCHLogicalChannel;
+class L3PhysicalInformation;
+class L3HandoverComplete;
+class Z100Timer;
 };
 
 namespace Control {
@@ -55,6 +59,122 @@ void AssignmentCompleteHandler(const GSM::L3AssignmentComplete*, GSM::TCHFACCHLo
 
 /** Find and compelte the in-process transaction associated with a successful handover. */
 void HandoverCompleteHandler(const GSM::L3HandoverComplete*, GSM::LogicalChannel*);
+
+
+
+
+class TransactionEntry;
+
+/** handover entry, placed when handover is requested from outside and removed when handoved complete message got at DCCH*/
+class HandoverEntry{
+	private:
+	
+	int mInitialTA;
+	//GSM::L3PhysicalInformation mPhysicalInformation;
+	
+	/** number of attempts to check against Ny1*/
+	unsigned mPhysicalInfoAttempts;
+	
+	unsigned mNy1;
+	
+	/** traffic channel allocated to accept handover */
+	//GSM::TCH mTCH;
+	GSM::TCHFACCHLogicalChannel *mTCH;
+	
+	/** ether waiting for Handover Access or sending PhysicalInformation */
+	bool mGotHA;
+	
+	/** SIP Register needed */
+	bool mGotHComplete;
+	
+	bool mRegisterPerformed;
+	
+	/** what handover reference was assigned for this attempt */
+	unsigned mHandoverReference;
+	
+	/** in this content acts as an attempt timeout*/
+	GSM::Z100Timer mT3103;
+	
+	/** transaction stores SIP session, mobileID etc*/
+	TransactionEntry* mTransaction;
+	
+	
+	
+	public:
+	
+	unsigned handoverReference() const { return mHandoverReference; }
+	
+	/** acknowledge via SIP, set timeout, change convolution in Transceiver */
+	HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogicalChannel* wTCH, unsigned wHandoverReference);
+	
+	/** must be called from
+	 * TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
+	 * file GSML1FEC.cpp
+	 * 
+	 * turn RACH decoding off, start sending Physical Info */
+	void HandoverAccessDetected(int initialTA);
+	
+	/** called from Handover thread;
+	 * returns TRUE if Physical Information sent */
+	bool T3105Tick();
+	
+	/** must be called from
+	 * file DCCHDispatch.cpp
+	 * stop sending Physical Info, T3103 timer, try to perform SIP Register */
+	void HandoverCompleteDetected(short wRtpPort);
+	
+	GSM::TCHFACCHLogicalChannel* channel() const { return mTCH; }
+	
+	/** true if performed (or attempted) */
+	bool SipRegister();
+	
+	bool removeHandoverEntry();
+	
+	TransactionEntry* transaction(){ return mTransaction; }
+};
+
+
+//typedef std::list<HandoverEntry> HandoverEntryList;
+class HandoverEntryMap : public std::map<unsigned,HandoverEntry*> {};
+
+
+class Handover{
+	public:
+	
+	Handover()
+		:mRunning(false), mT3105(gConfig.getNum("GSM.Handover.T3105")), mHandoverReference(1)
+	{}
+	
+	void start();
+
+	unsigned allocateHandoverReference();
+	
+	void addHandover(HandoverEntry he);
+	
+	void showHandovers();
+	
+	HandoverEntry *find_handover(unsigned wTN);
+	
+	private:
+
+	HandoverEntryMap mHandovers;		///< active handovers.
+	mutable Mutex mLock;			///< Lock for thread-safe access.
+	Signal mHandoverSignal;			///< signal to wake the loop
+	Thread mHandoverThread;			///< Thread for the loop.
+	volatile bool mRunning;
+	
+	unsigned mHandoverReference;		///< variable for allocating new referencies		
+	
+	/** !! Attention: in usec needed here */
+	unsigned mT3105;			///< a value in usecs to sleep between sending PhysicalInfo
+	
+	friend void *HandoverServiceLoop(Handover *);
+	
+	void handoverHandler();
+};
+
+void *HandoverServiceLoop(Handover *);
+
 
 /**@ Access Grant mechanisms */
 //@{

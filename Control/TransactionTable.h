@@ -145,22 +145,11 @@ class TransactionEntry {
 		const GSM::L3MobileIdentity& wSubscriber,
 		GSM::LogicalChannel* wChannel,
 		const GSM::L3CMServiceType& wService);
-	void addHandoverEntry(const HandoverEntry* wHandoverEntry);
+	void addHandoverEntry(HandoverEntry* wHandoverEntry);
 	
 	/** Delete the database entry upon destruction. */
 	~TransactionEntry();
-
-	/** handover-related stuff */
-	void HOCSendHandhoverAck(unsigned wHandoverReference, 
-		unsigned wBCC, unsigned wNCC, unsigned wC0,
-		char *wChannelDescription);
-
-	void HOCTimeout();
-	
-	void HOCSuccessfulHandover(short wRtpPort, unsigned wCodec);
 		
-	HandoverEntry *find_handover(unsigned wTN);
-	
 	/**@name Accessors. */
 	//@{
 	unsigned L3TI() const;
@@ -190,7 +179,7 @@ class TransactionEntry {
 	GSM::CallState GSMState() const;
 	void GSMState(GSM::CallState wState);
 
-	const HandoverEntry * handoverEntry() const { return mHandoverEntry; }
+	//const HandoverEntry * handoverEntry() const { return mHandoverEntry; }
 	HandoverEntry * handoverEntry() { return mHandoverEntry; }
 	//@}
 
@@ -268,14 +257,13 @@ class TransactionEntry {
 
 	
 	/** acknowledge handover initiation; publish handoverReference + cellId + chanId */
-	SIP::SIPState HOCSendHandhoverAck(unsigned handoverReference, unsigned BCC, unsigned NCC, unsigned C0, char *channelDescription);
+	SIP::SIPState HOCSendHandoverAck(unsigned handoverReference, unsigned BCC, unsigned NCC, unsigned C0, const char *channelDescription);
 	
 	/** drop handover-originated "call setup" */
 	SIP::SIPState HOCTimeout();
 	
 	/** complete handover-originated "call setup" and provide rtp endpoint*/
 	SIP::SIPState HOCSendHandoverComplete(short rtpPort);
-	
 	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)
@@ -401,7 +389,7 @@ class TransactionTable {
 	TransactionEntry* findLongestCall();
 
 	/** find handover-originated transaction by assigned channel */
-	TransactionEntry* find_handover(unsigned wTN);
+	HandoverEntry* find_handover(unsigned wTN);
 	
 	/**
 		Return the availability of this particular RTP port

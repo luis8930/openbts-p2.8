@@ -148,7 +148,7 @@ class GSMConfig {
 	/**@name Accessors. */
 	//@{
 	Control::Pager& pager() { return mPager; }
-	Control::Handover& Handover() { return mHandover; }
+	Control::Handover& handover() { return mHandover; }
 	GSMBand band() const { return mBand; }
 	unsigned BCC() const { return mBCC; }
 	unsigned NCC() const { return mNCC; }
