@@ -1104,10 +1104,8 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 				if (initialTA<0) initialTA=0;
 				if (initialTA>62) initialTA=62;
 				
-				HandoverEntry *he = gTransactionTable.find_handover(TN());
-				he->HandoverAccessDetected(L3PhysicalInformation(initialTA));
-				
-				facch->send(L3PhysicalInformation(initialTA),UNIT_DATA,0);
+				Control::HandoverEntry *he = gBTS.handover().find_handover(TN());
+				he->HandoverAccessDetected(initialTA);
 			}
 			else OBJLOG(INFO) <<"Wrong Handover Reference " << HR << "\n";
 		return false;}

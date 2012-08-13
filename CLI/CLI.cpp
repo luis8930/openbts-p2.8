@@ -737,6 +737,9 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	os << endl << count << " transactions in table" << endl;
 
 	
+	
+	
+	// =========================================================
 	// activities for Target side, code will migrate to
 	// SIPInterface::checkInvite()
 	
@@ -751,20 +754,31 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 		os << "unable to allocate target channel ";
 		return  NOT_FOUND;
 	}
+	// if the old handover-originated call finished at the same channel, 
+	// but SIP Register still needs to be done
+	if(gBTS.handover().find_handover(TCH->TN())){
+		LOG(ERR) << "some handover activities at the idle channel" << TCH->TN();
+		return NOT_FOUND;
+	}
+	TCH->open();
+	
 	// 3) create a transaction
-	TransactionEntry *transaction = new TransactionEntry(gConfig.getStr("SIP.Proxy.SMS").c_str(),argv[1],TCH,L3CMServiceType::HandoverOriginatedCall);
+	os << "creating a transaction";
+	Control::TransactionEntry *transaction = new Control::TransactionEntry(gConfig.getStr("SIP.Proxy.SMS").c_str(),argv[1],TCH,GSM::L3CMServiceType::HandoverOriginatedCall);
 	
-	// 4) start handover
-	HandoverEntry handover = new HandoverEntry(*transaction,TCH,handoverReference);
-	transaction->addHandoverEntry(&handover);
+	// fill it with SIP details - not now
 	
-	// this is just to verify the content to be sent,
-	// copypasted from HandoverEntry constructor
-	os << "Cell:" << 
-		" BCC= " << gConfig.getNum("GSM.Identity.BSIC.BCC") << 
-		", NCC=" << gConfig.getNum("GSM.Identity.BSIC.NCC") <<
-		", C0=" << gConfig.getNum("GSM.Radio.C0");
-	os << "Channel: " << TCH->channelDescription();
+	// 4) acknowledge handover(ea provide the details), start handover
+	Control::HandoverEntry *handover = new Control::HandoverEntry(transaction,TCH,handoverReference);
+	transaction->addHandoverEntry(handover);	// provide a value to transaction
+	gBTS.handover().addHandover(*handover);		// add handover for processing
+
+	os << "transaction populated for HR " << transaction->handoverEntry()->handoverReference();
+	
+	// INVITE processing is finished here
+	// ==========================================================
+	
+	
 	
 	
 	
@@ -777,7 +791,7 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 
 	// must be replaced with real-life Handover Command, with CellID + ChannelID
 	DCCH->send(GSM::L3HandoverCommand(TCH->channelDescription(),handoverReference));
-	sleep 2;
+	sleep(2);
 	return SUCCESS;
 }
 //@} // CLI commands

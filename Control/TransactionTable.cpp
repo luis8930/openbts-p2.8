@@ -572,21 +572,57 @@ bool TransactionEntry::terminationRequested()
 
 
 // functions for Handover-Originated transactions
-void TransactionEntry::TransactionEntry(const char* proxy,
-		const GSM::L3MobileIdentity& wSubscriber,
-		GSM::LogicalChannel* wChannel,
-		const GSM::L3CMServiceType& wService){
-		
+TransactionEntry::TransactionEntry(const char* proxy,
+	const GSM::L3MobileIdentity& wSubscriber,
+	GSM::LogicalChannel* wChannel,
+	const GSM::L3CMServiceType& wService)
+
+	:mID(gTransactionTable.newID()),
+	mSubscriber(wSubscriber),
+	mSIP(proxy,mSubscriber.digits()),
+	mService(wService),
+	mChannel(wChannel)
+{
+	LOG(INFO) << "starting transaction for handover, " << mChannel;
 }
 
 
-void TransactionEntry::addHandoverEntry(const HandoverEntry& wHandoverEntry){
-	mHandoverEntry(wHandoverEntry);
+void TransactionEntry::addHandoverEntry(HandoverEntry * wHandoverEntry){
+	mHandoverEntry = wHandoverEntry;
+	
+	LOG(INFO) << "linking transaction " << this->mChannel << "with handover " << mHandoverEntry->handoverReference();
 }
 
-void TransactionEntry::HOCSendHandhoverAck(unsigned wHandoverReference, 
+
+SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference, 
 		unsigned wBCC, unsigned wNCC, unsigned wC0,
-		char *wChannelDescription);
+		const char *channelDescription){
+
+	LOG(INFO) << "SIP, acknowledging (with SIP:Progress or somehow else)" << 
+		"\n\t Handover:" << wHandoverReference <<
+		"\n\t Cell:" << 
+		" BCC= " << wBCC << 
+		", NCC=" << wNCC <<
+		", C0=" << wC0 << 
+		"\n\t Channel: " << *channelDescription;
+}
+
+
+
+SIP::SIPState TransactionEntry::HOCSendHandoverComplete(short rtpPort){
+
+	LOG(INFO) << "SIP, 200 ok for handovers' INVITE ";
+}
+
+
+
+SIP::SIPState TransactionEntry::HOCTimeout(){
+	
+	LOG(ERR) << "imagine we sending smth like SIP 4xx FAILED";
+}
+
+
+
 
 
 
