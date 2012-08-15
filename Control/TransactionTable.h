@@ -365,9 +365,6 @@ class TransactionTable {
 	*/
 	TransactionEntry* findLongestCall();
 
-	/** find handover-originated transaction by assigned channel */
-	HandoverEntry* find_handover(unsigned wTN);
-	
 	/**
 		Return the availability of this particular RTP port
 		@return True if Port is available, False otherwise
