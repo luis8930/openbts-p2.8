@@ -884,7 +884,7 @@ TransactionEntry::TransactionEntry(const char* proxy,
 void TransactionEntry::addHandoverEntry(HandoverEntry * wHandoverEntry){
 	mHandoverEntry = wHandoverEntry;
 	
-	LOG(INFO) << "linking transaction " << this->mChannel << "with handover " << mHandoverEntry->handoverReference();
+	LOG(WARNING) << "handover: linking transaction " << this->mChannel << "with handover " << mHandoverEntry->handoverReference();
 }
 
 
@@ -892,7 +892,7 @@ SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference,
 		unsigned wBCC, unsigned wNCC, unsigned wC0,
 		const char *channelDescription){
 
-	LOG(INFO) << "SIP, acknowledging (with SIP:Progress or somehow else)" << 
+	LOG(WARNING) << "handover: SIP, acknowledging (with SIP:Progress or somehow else)" << 
 		"\n\t Handover:" << wHandoverReference <<
 		"\n\t Cell:" << 
 		" BCC= " << wBCC << 
@@ -905,14 +905,14 @@ SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference,
 
 SIP::SIPState TransactionEntry::HOCSendHandoverComplete(short rtpPort){
 
-	LOG(INFO) << "SIP, 200 ok for handovers' INVITE ";
+	LOG(WARNING) << "SIP, 200 ok for handovers' INVITE ";
 }
 
 
 
 SIP::SIPState TransactionEntry::HOCTimeout(){
 	
-	LOG(ERR) << "imagine we sending smth like SIP 4xx FAILED";
+	LOG(ERR) << "handover: imagine we are sending smth like SIP 4xx FAILED";
 }
 
 

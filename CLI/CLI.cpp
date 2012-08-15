@@ -802,7 +802,8 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 
 	
 	
-	
+	LOG(WARNING) << "handover (CLI), starting";
+		
 	// =========================================================
 	// activities for Target side, code will migrate to
 	// SIPInterface::checkInvite()
@@ -843,8 +844,10 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	// ==========================================================
 	
 	
+	LOG(WARNING) << "handover (CLI), sleeping";
+	sleep(1);
 	
-	
+	LOG(WARNING) << "handover (CLI), pushing";
 	
 	// emulating activities at the Donor side
 	GSM::LogicalChannel *DCCH = gTransactionTable.findChannel(argv[1]);//	look by IMSI
