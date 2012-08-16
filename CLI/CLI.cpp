@@ -774,6 +774,9 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	transaction->addHandoverEntry(handover);	// provide a value to transaction
 	gBTS.handover().addHandover(*handover);		// add handover for processing
 
+	// add SDP from INVITE (with rpt data for the fixed leg),
+	// and L3TI from the original call as well, see GSM 04.08, 4.5.1.6 !!!
+
 	os << "transaction populated for HR " << transaction->handoverEntry()->handoverReference();
 	
 	// INVITE processing is finished here
