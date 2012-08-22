@@ -98,14 +98,14 @@ class HandoverEntry{
 	/** transaction stores SIP session, mobileID etc*/
 	TransactionEntry* mTransaction;
 	
-	
+	const char *mCallID;
 	
 	public:
 	
 	unsigned handoverReference() const { return mHandoverReference; }
 	
 	/** acknowledge via SIP, set timeout, change convolution in Transceiver */
-	HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogicalChannel* wTCH, unsigned wHandoverReference);
+	HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogicalChannel* wTCH, unsigned wHandoverReference, const char* wCallID);
 	
 	/** must be called from
 	 * TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
@@ -131,6 +131,8 @@ class HandoverEntry{
 	bool removeHandoverEntry();
 	
 	TransactionEntry* transaction(){ return mTransaction; }
+	
+	const char *callID() const { return mCallID; }
 };
 
 
@@ -154,6 +156,8 @@ class Handover{
 	void showHandovers();
 	
 	HandoverEntry *find_handover(unsigned wTN);
+	
+	bool activeCallID(const char* callID);
 	
 	private:
 

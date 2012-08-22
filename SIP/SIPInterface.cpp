@@ -290,6 +290,127 @@ const char* extractCallID(const osip_message_t* msg)
 
 }
 
+#define HANSOVER_SIGNATURE	"handover-"
+
+bool SIPInterface::checkInviteHOC(osip_message_t* msg){
+	// as SIP packing of handover may be changed, it seems reasonably to keep it
+	// apart from the stable code
+	
+	// Get the SIP call ID.
+	const char * callIDNum = extractCallID(msg);	
+	if (!callIDNum) {
+		// FIXME -- Send appropriate error on SIP interface.
+		LOG(WARNING) << "Incoming INVITE (handover) with no call ID";
+		return false;
+	}
+	if (strstr(callIDNum,HANSOVER_SIGNATURE) != callIDNum) return false;
+	
+	unsigned l3ti;
+	sscanf(callIDNum+strlen(HANSOVER_SIGNATURE),"%d",&l3ti);
+	if(!l3ti) return false;
+	
+	// this is really a request for handover
+
+	// Get the caller ID if it's available.
+	//const char *callerID = "";
+	const char *callerHost = "";
+	osip_from_t *from = osip_message_get_from(msg);
+	if (from) {
+		osip_uri_t* url = osip_contact_get_url(from);
+		if (url) {
+	//		if (url->username) callerID = url->username;
+			if (url->host) callerHost = url->host;
+		}
+	}
+	
+	// Get request username (IMSI) from invite. 
+	const char* IMSI = extractIMSI(msg);
+	if (!IMSI) {
+		LOG(WARNING) << "Incoming INVITE (handover) with no IMSI";
+		return false;
+	}
+	L3MobileIdentity mobileID(IMSI);
+
+	LOG(WARNING) << "handover INVITE detected, callID=" << callIDNum << 
+		", IMSI=" << mobileID << ", L3TI=" << l3ti;
+
+	// TO DO: if callIDNum is known, it can be ether:
+	// - a copy of handover setup
+	// - re-invite
+	// if no active handover with this callID, try to treat is as RE-INVITE
+	// otherwise just ignore it
+	if(! gBTS.handover().activeCallID(callIDNum)){
+		// process re-invite
+		LOG(WARNING) << "re-invite for handover originated call " << callIDNum;
+		LOG(ERR) << "not yet implemented";
+		return true;
+	}
+	
+	// 1) allocate Handover Reference
+	unsigned handoverReference = gBTS.handover().allocateHandoverReference();
+	
+	if(! handoverReference) {
+		// FIXME -- Send appropriate error on SIP interface.
+		LOG(WARNING) << "SIP: refusing to place handover";
+		return false;
+	}
+	
+	// 2) allocate a channel
+	GSM::TCHFACCHLogicalChannel *TCH = NULL;
+	TCH = gBTS.getTCH();
+	if (TCH==NULL) {
+		// FIXME -- Send appropriate error on SIP interface.
+		LOG(WARNING) << "unable to allocate channel for handover";
+		return false;
+	}
+	// if the old handover-originated call finished at the same channel, 
+	// but SIP Register still needs to be done
+	if(gBTS.handover().find_handover(TCH->TN())){
+		// FIXME -- Send appropriate error on SIP interface.
+		LOG(WARNING) << "some handover activities at the idle channel" << TCH->TN();
+		return false;
+	}
+	TCH->open();
+	
+	// 3) create a transaction
+	Control::TransactionEntry *transaction = new Control::TransactionEntry(
+		gConfig.getStr("SIP.Proxy.SMS").c_str(),
+		mobileID,
+		TCH,
+		l3ti,
+		GSM::L3CMServiceType::HandoverOriginatedCall);
+	
+	// handover transaction has callerNumber==calledNumber
+	transaction->SIPUser(callIDNum,IMSI,IMSI,callerHost);
+	transaction->saveINVITE(msg,false);
+	
+	// fill it with SIP details - not now
+	
+	// 4) acknowledge handover(ea provide the details), start handover
+	Control::HandoverEntry *handover = 
+		new Control::HandoverEntry(transaction,TCH,handoverReference,callIDNum);
+	transaction->addHandoverEntry(handover);	// provide a value to transaction
+	gBTS.handover().addHandover(*handover);		// add handover for processing
+		
+	// HO Ref, Cell Id, ChannelID - all the donor site needs to know now	
+	addCall(callIDNum);
+	
+	LOG(WARNING) << "handover, sending ack";
+	std::ostringstream strm;
+	TCH->channelDescription().text(strm);
+	std::string stringWithChannelDescription = strm.str();
+	transaction->HOCSendHandoverAck(handoverReference, 
+		gConfig.getNum("GSM.Identity.BSIC.BCC"),
+		gConfig.getNum("GSM.Identity.BSIC.NCC"),
+		gConfig.getNum("GSM.Radio.C0"),
+		stringWithChannelDescription.c_str());
+
+	
+	
+	
+	
+	return true;
+}
 
 
 
@@ -313,6 +434,7 @@ bool SIPInterface::checkInvite( osip_message_t * msg)
 	// pretty sure strings are garbage collected
 	string proxy = get_return_address(msg);
 	if (strcmp(method,"INVITE") == 0) {
+		if(checkInviteHOC(msg)) return true;
 		// INVITE is for MTC.
 		// Set the required channel type to match the assignment style.
 		if (gConfig.defines("Control.VEA")) {

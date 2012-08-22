@@ -37,7 +37,11 @@ namespace Control {
 
 class TransactionEntry;
 
-
+/**@name HOC */
+//@{
+/** call that appeared due to Handover */
+void HOCController(GSM::LogicalChannel*);
+//@}
 
 /**@name MOC */
 //@{
@@ -57,6 +61,9 @@ void MTCStarter(TransactionEntry*, GSM::LogicalChannel*);
 /** Complete the MTC connection. */
 void MTCController(TransactionEntry*, GSM::TCHFACCHLogicalChannel*);
 //@}
+
+// by Jet, activities at the "old" site
+void HOController(TransactionEntry *transaction);
 
 
 /**@name Test Call */
