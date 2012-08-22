@@ -106,6 +106,10 @@ const char* SIP::SIPStateString(SIPState s)
 		case Canceled: return "Canceled";
 		case Cleared: return "Cleared";
 		case MessageSubmit: return "SMS-Submit";
+		//HO state
+		case HO_Initiated: return "HO_Initiated";
+		case HO_WaitAccess: return "HO_WaitAccess";
+		case HO_Active: return "HO_Active";
 		default: return NULL;
 	}
 }
@@ -939,6 +943,168 @@ SIPState SIPEngine::MODWaitForResponse(vector<unsigned> *validResponses, Mutex *
 	}
 
 	if (!responded) { LOG(ALERT) << "lost contact with proxy " << mProxyIP << ":" << mProxyPort; }
+	return mState;
+};
+
+SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short wDestRTP, unsigned wCodec)
+	:mCSeq(random()%1000),
+	mMyToFromHeader(NULL), mRemoteToFromHeader(NULL),
+	mCallIDHeader(NULL),
+	mSIPPort(gConfig.getNum("SIP.Local.Port")),
+	mSIPIP(gConfig.getStr("SIP.Local.IP")),
+	mINVITE(NULL), mLastResponse(NULL), mBYE(NULL),
+	mCANCEL(NULL), mSession(NULL), mTxTime(0), mRxTime(0),
+	mState(NullState),
+	mDTMF('\0'),mDTMFDuration(0),
+	mDRTPPort(wDestRTP), mCodec(wCodec)
+{
+	LOG(ERR) << "creating SIP engine for outgoing handover transaction";
+	assert(proxy);
+	mSIPUsername = string("IMSI") + IMSI;
+	LOG(ERR) << "creating SIP engine for outgoing handover transaction, username " << mSIPUsername;
+	char tmp[200];
+	sprintf(tmp, "handover-%u-%s-%lX", wL3TI, mSIPUsername.c_str(), time(0));
+	LOG(ERR) << "creating SIP engine for outgoing handover transaction, callID " << tmp;
+	
+	mCallID = tmp;
+
+	LOG(ERR) << "creating SIP engine for outgoing handover, 1 ";
+
+	if (!resolveAddress(&mProxyAddr,proxy)) {
+		LOG(ALERT) << "outgoing handover cannot resolve IP address for " << proxy;
+		return;
+	}
+	LOG(ERR) << "creating SIP engine for outgoing handover, 2 ";
+
+	char host[256];
+	const char* ret = inet_ntop(AF_INET,&(mProxyAddr.sin_addr),host,255);
+	if (!ret) {
+		LOG(ALERT) << "outgoing handover cannot translate proxy IP address";
+		return;
+	}
+	LOG(ERR) << "creating SIP engine for outgoing handover, 3 ";
+	
+	mProxyIP = string(host);
+	mProxyPort = ntohs(mProxyAddr.sin_port);
+	LOG(ERR) << "creating SIP engine for outgoing handover, 4 ";
+
+	// generate a tag now
+	make_tag(tmp);
+	mMyTag=tmp;	
+	// set our CSeq in case we need one
+	mCSeq = random()%600;
+
+	//to make sure noise doesn't magically equal a valid RTP port
+	mRTPPort = 0;
+	LOG(ERR) << "creating SIP engine for outgoing handover, done ";
+}
+
+SIPState SIPEngine::HOSendINVITE(string whichBTS)
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+	
+	// Set Invite params. 
+	// new CSEQ and codec 
+	char tmp[50];
+	make_branch(tmp);
+	mViaBranch = tmp;
+	mCSeq++;
+	
+	LOG(DEBUG) << "mRemoteUsername=" << mRemoteUsername;
+	LOG(DEBUG) << "mSIPUsername=" << mSIPUsername;
+
+	osip_message_t * invite = sip_handover(
+		mSIPUsername.c_str(), mDRTPPort, mSIPUsername.c_str(), 
+		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
+		mViaBranch.c_str(), mCallID.c_str(), mCSeq, mCodec); 
+
+	LOG(ERR) << "handover Invite has callID=" << invite->call_id->number;
+	
+	// Send Invite.
+
+
+	if (! resolveAddress(&mHOtoBTSAddr, whichBTS.c_str(), mSIPPort)) {
+		LOG(ALERT) << "handover cannot resolve IP address for " << whichBTS;
+		return mState;
+	}	
+	gSIPInterface.write(&mHOtoBTSAddr,invite);
+	saveINVITE(invite,true);
+	osip_message_free(invite);
+	mState = HO_Initiated;
+	return mState;
+};
+
+SIPState  SIPEngine::HOWaitForOK()
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+
+	osip_message_t * msg;
+
+	// Read off the fifo. if time out will
+	// clean up and return false.
+	try {
+		msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.A"));
+	}
+	catch (SIPTimeout& e) { 
+		LOG(DEBUG) << "timeout";
+		mState = Timeout;
+		return mState;
+	}
+
+	int status = msg->status_code;
+	LOG(DEBUG) << "received status " << status;
+	saveResponse(msg);
+	switch (status) {
+		case 100:	// Trying
+		case 183:	// Progress
+			mState = HO_WaitAccess;
+			break;
+		case 200:	// OK
+			// Save the response and update the state,
+			// but the ACK doesn't happen until the call connects.
+			mState = HO_Active;
+			
+			break;
+		// Anything 400 or above terminates the call, so we ACK.
+		// FIXME -- It would be nice to save more information about the
+		// specific failure cause.
+		case 486:
+		case 503:
+			mState = Busy;
+			HOSendACK();
+			break;
+		default:
+			LOG(NOTICE) << "unhandled status code " << status;
+			mState = Fail;
+			MOCSendACK();
+	}
+	osip_message_free(msg);
+	LOG(DEBUG) << " new state: " << mState;
+	return mState;
+}
+
+//this isn't working right now -kurtis
+SIPState SIPEngine::HOSendACK()
+{
+	assert(mLastResponse);
+
+	// new branch
+	char tmp[50];
+	make_branch(tmp);
+	mViaBranch = tmp;
+
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+
+	osip_message_t* ack = sip_ack( mRemoteDomain.c_str(),
+		mRemoteUsername.c_str(), 
+		mSIPUsername.c_str(),
+		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
+		mMyToFromHeader, mRemoteToFromHeader,
+		mViaBranch.c_str(), mCallIDHeader, mCSeq
+	);
+
+	gSIPInterface.write(&mHOtoBTSAddr,ack);
+	osip_message_free(ack);	
 
 	return mState;
 }
@@ -977,12 +1143,58 @@ SIPState SIPEngine::MODWaitForERRORACK(bool cancel, Mutex *lock)
 	return mState;
 }
 
+SIPState SIPEngine::HOSendREINVITE()
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+/*	
+	// Set Invite params. 
+	// new CSEQ and codec 
+	char tmp[50];
+	make_branch(tmp);
+	mViaBranch = tmp;
+	mCSeq++;
+	
+	LOG(DEBUG) << "mRemoteUsername=" << mRemoteUsername;
+	LOG(DEBUG) << "mSIPUsername=" << mSIPUsername;
+
+	osip_message_t * invite = sip_handover(
+		mRemoteUsername.c_str(), mRTPPort, mSIPUsername.c_str(), 
+		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
+		mMyTag.c_str(), mViaBranch.c_str(), mCallID.c_str(), mCSeq, mCodec); 
+
+	
+	// Send Invite.
+
+	gSIPInterface.write(&mHOtoBTSAddr,invite);
+	saveINVITE(invite,true);
+	osip_message_free(invite);
+	mState = HO_Initiated;
+*/	
+	return mState;
+};
+
+
+SIPState SIPEngine::HOCSendProceeding(const char *body)
+{
+	LOG(ERR) << "ack'ing handover, user " << mSIPUsername 
+		<< " state " << mState
+		<< "target " << body;
+	if (mINVITE==NULL) mState=Fail;
+	if (mState==Fail) return mState;
+	osip_message_t * proceeding = sip_proceeding(mINVITE, mSIPUsername.c_str(), mProxyIP.c_str(),body);
+	gSIPInterface.write(&mProxyAddr,proceeding);
+	osip_message_free(proceeding);
+	mState=Proceeding;
+	return mState;
+}
+
+
 SIPState SIPEngine::MTDCheckBYE()
 {
 	//LOG(DEBUG) << "user " << mSIPUsername << " state " << mState;
 	// If the call is not active, there should be nothing to check.
 	if (mState!=Active) return mState;
-
+	
 	// Need to check size of osip_message_t* fifo,
 	// so need to get fifo pointer and get size.
 	// HACK -- reach deep inside to get damn thing
@@ -1256,7 +1468,7 @@ void SIPEngine::InitRTP(const osip_message_t * msg )
 	char d_port[10];
 	get_rtp_params(msg, d_port, d_ip_addr);
 	LOG(DEBUG) << "IP="<<d_ip_addr<<" "<<d_port<<" "<<mRTPPort;
-
+	mDRTPPort = atoi(d_port);
 	rtp_session_set_local_addr(mSession, "0.0.0.0", mRTPPort );
 	rtp_session_set_remote_addr(mSession, d_ip_addr, atoi(d_port));
 

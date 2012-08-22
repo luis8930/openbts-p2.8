@@ -63,7 +63,11 @@ enum SIPState  {
 	Canceled,
 	Cleared,
 	Fail,
-	MessageSubmit
+	MessageSubmit,
+			//HO state
+	HO_Initiated,
+	HO_WaitAccess,
+	HO_Active
 };
 
 
@@ -104,6 +108,9 @@ private:
 	std::string mProxyIP;			///< IP address of the SIP proxy
 	unsigned mProxyPort;			///< UDP port number of the SIP proxy
 	struct ::sockaddr_in mProxyAddr;	///< the ready-to-use UDP address
+	
+	struct ::sockaddr_in mHOtoBTSAddr;	///< target iBTS address
+
 	//@}
 
 	/**@name Saved SIP messages. */
@@ -119,6 +126,7 @@ private:
 	/**@name RTP state and parameters. */
 	//@{
 	short mRTPPort;
+	short mDRTPPort;
 	unsigned mCodec;
 	RtpSession * mSession;		///< RTP media session
 	unsigned int mTxTime;		///< RTP transmission timestamp in 8 kHz samples
@@ -156,6 +164,8 @@ public:
 
 	/** Return the RTP Port being used. */
 	short RTPPort() const { return mRTPPort; }
+	short DestRTPPort() const { return mDRTPPort; }
+	unsigned codec() const { return mCodec; }
 
 	/** Return if the call has successfully finished */
 	bool finished() const { return (mState==Cleared || mState==Canceled); }
@@ -170,6 +180,9 @@ public:
 	/** Set the use to IMSI<IMSI> and set the other SIP call parameters; for network-originated transactions. */
 	void user( const char * wCallID, const char * IMSI , const char *origID, const char *origHost);
 
+	/** Set generate call ID for outgoing handover */
+	SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short wDestRTP, unsigned wCodec);
+	
 	/**@name Messages for SIP registration. */
 	//@{
 
@@ -314,6 +327,13 @@ public:
 
 	SIPState MTDSendCANCELOK();
 	//@}
+	SIPState HOSendINVITE(string whichBTS);
+	SIPState HOWaitForOK();
+	SIPState HOSendACK();
+	SIPState HOSendREINVITE();
+	
+	// sip body must contain target cell parameters for handover
+	SIPState HOCSendProceeding(const char *body);
 
 
 	/** Set up to start sending RFC2833 DTMF event frames in the RTP stream. */

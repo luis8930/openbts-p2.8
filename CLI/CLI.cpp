@@ -800,8 +800,45 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	size_t count = gTransactionTable.dump(os);
 	os << endl << count << " transactions in table" << endl;
 
+	GSM::L3MobileIdentity mobileID(argv[1]);
+	
+	Control::TransactionEntry* transaction= gTransactionTable.find(mobileID,GSM::Active);
+	if(transaction==NULL) {
+		os << "handover(CLI): transaction with IMSI not found " << argv[1];
+		return BAD_NUM_ARGS;
+	} 
+	
+	LOG(ERR) << "\"old\" handover transaction: " << *transaction;
+	os << "\"old\" handover transaction: " << *transaction;
+	unsigned codec = transaction->codec();
+	LOG(ERR) << "\"old\" handover transaction: (1)" << *transaction;
+	short destRTPPort = transaction->destRTPPort();
+	LOG(ERR) << "\"old\" handover transaction: (2)" << *transaction;
+	unsigned l3ti = transaction->L3TI();
+	LOG(ERR) << "\"old\" handover transaction, L3TI: " << l3ti;
+	LOG(ERR) << "\"old\" handover transaction, dest RTP" << destRTPPort;
+	LOG(ERR) << "\"old\" handover transaction, codec" << codec;
+	
+	Control::TransactionEntry *newTransaction= 
+		new Control::TransactionEntry(transaction, argv[1],
+		l3ti,
+		destRTPPort,
+		codec);
+	os << "\"temporary\" transaction ceated";
+	LOG(ERR) << "\"temporary\" transaction ceated";
+	
+	//os << "\"temporary\" transaction" << *newTransaction;
+		
+	string whichBTS = "127.0.0.1";
+	newTransaction->HOSendINVITE(whichBTS);
+	
+	LOG(ERR) << "CLI: handover Invite sent";
+	os << "handover Invite sent";
+	
+	Control::HOController(newTransaction);
 	
 	
+/*	
 	LOG(WARNING) << "handover (CLI), starting";
 		
 	// =========================================================
@@ -811,6 +848,11 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	// 1) allocate Handover Reference
 	unsigned handoverReference = gBTS.handover().allocateHandoverReference();
 	os << "HandoverReference is " << handoverReference;
+	
+	if(! handoverReference) {
+		LOG(WARNING) << "SIP: refusing to place handover";
+		return  NOT_FOUND;
+	}
 	
 	// 2) allocate a channel
 	GSM::TCHFACCHLogicalChannel *TCH = NULL;
@@ -837,9 +879,18 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	Control::HandoverEntry *handover = new Control::HandoverEntry(transaction,TCH,handoverReference);
 	transaction->addHandoverEntry(handover);	// provide a value to transaction
 	gBTS.handover().addHandover(*handover);		// add handover for processing
-
-	os << "transaction populated for HR " << transaction->handoverEntry()->handoverReference();
+		// HO Ref, Cell Id, ChannelID - all the donor site needs to know now
 	
+	LOG(WARNING) << "handover, sending ack";
+	std::ostringstream strm;
+	TCH->channelDescription().text(strm);
+	std::string stringWithChannelDescription = strm.str();
+	transaction->HOCSendHandoverAck(handoverReference, 
+		gConfig.getNum("GSM.Identity.BSIC.BCC"),
+		gConfig.getNum("GSM.Identity.BSIC.NCC"),
+		gConfig.getNum("GSM.Radio.C0"),
+		stringWithChannelDescription.c_str());
+
 	// INVITE processing is finished here
 	// ==========================================================
 	
@@ -859,6 +910,7 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	// must be replaced with real-life Handover Command, with CellID + ChannelID
 	DCCH->send(GSM::L3HandoverCommand(TCH->channelDescription(),handoverReference));
 	sleep(2);
+*/
 	return SUCCESS;
 }
 //@} // CLI commands

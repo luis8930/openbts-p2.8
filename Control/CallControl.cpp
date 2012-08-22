@@ -1016,6 +1016,56 @@ void Control::MOCController(TransactionEntry *transaction, GSM::TCHFACCHLogicalC
 }
 
 
+void Control::HOController(TransactionEntry *transaction)
+{
+//	LOG(DEBUG) << "transaction: " << *transaction;
+//	unsigned L3TI = transaction->L3TI();
+//	assert(L3TI>7);
+
+
+
+	LOG(INFO) << "wait for SIP OKAY";
+	SIP::SIPState state = transaction->SIPState();
+	while (state!=SIP::HO_Active) {
+
+		LOG(DEBUG) << "wait for SIP session start";
+		state = transaction->HOWaitForOK();
+		LOG(DEBUG) << "SIP state "<< state;
+
+
+		// parse out SIP state
+		switch (state) {
+			case SIP::Busy:
+				// Should this be possible at this point?
+				LOG(INFO) << "SIP:Busy, abort";
+				//return abortAndRemoveCall(transaction,TCH,GSM::L3Cause(0x11));
+			case SIP::Fail:
+				LOG(INFO) << "SIP:Fail, abort";
+				//return abortAndRemoveCall(transaction,TCH,GSM::L3Cause(0x7F));
+			case SIP::Proceeding:
+				LOG(ERR) << "SIP:Proceeding, need to check sdp and issue handover Command";
+				LOG(ERR) << "Handover Command must be sent from" << transaction->callingTransaction();
+				
+				//TCH->send(GSM::L3Progress(L3TI));
+				break;
+			// For these cases, do nothing.
+			case SIP::Timeout:
+				// FIXME We should abort if this happens too often.
+				// For now, we are relying on the phone, which may have bugs of its own.
+			case SIP::Active:
+			default:
+				break;
+		}
+	} 
+	
+	transaction->HOSendACK();
+	transaction->HOSendREINVITE();
+
+
+
+	// The radio link should have been cleared with the call.
+	// So just return.
+}
 
 
 void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH)

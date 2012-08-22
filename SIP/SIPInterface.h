@@ -167,6 +167,7 @@ public:
 		@return true if the message is a new INVITE
 	*/
 	bool checkInvite( osip_message_t *);
+	bool checkInviteHOC( osip_message_t*);
 
 	/**
 		Send an error response before a transaction is even created.

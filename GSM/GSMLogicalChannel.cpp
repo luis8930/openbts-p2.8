@@ -288,7 +288,7 @@ void SACCHLogicalChannel::serviceLoop()
 									mMeasurementResults.text(strm);
 									std::string str =  strm.str();
 									
-									transaction->sendINFO(str.c_str());
+									//transaction->sendINFO(str.c_str());
 							
 						}
 						else {

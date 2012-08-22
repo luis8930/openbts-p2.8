@@ -555,32 +555,15 @@ void Pager::dump(ostream& os) const
 
 
 
-HandoverEntry::HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogicalChannel* wTCH, unsigned wHandoverReference)
-	:mTransaction(wTransaction), mTCH(wTCH), mHandoverReference(wHandoverReference){
-	
+HandoverEntry::HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogicalChannel* wTCH, unsigned wHandoverReference, const char *wCallID)
+	:mTransaction(wTransaction), mTCH(wTCH), mHandoverReference(wHandoverReference), mCallID(wCallID){
+
 	LOG(WARNING) << "handover entry constructor";
 	
 	gTRX.ARFCN()->handoverOn(mTCH->TN(),mHandoverReference);
 	mGotHA = mGotHComplete = mRegisterPerformed = false;
-	
-	// HO Ref, Cell Id, ChannelID - all the donor site needs to know now
-	/*
-	mTransaction->HOCSendHandoverAck(mHandoverReference, 
-		gConfig.getNum("GSM.Identity.BSIC.BCC"),
-		gConfig.getNum("GSM.Identity.BSIC.NCC"),
-		gConfig.getNum("GSM.Radio.C0"),
-		(char*)mTCH->channelDescription());
-	*/
-	
-	LOG(WARNING) << "handover, sending ack";
-	std::ostringstream strm;
-	mTCH->channelDescription().text(strm);
-	std::string stringWithChannelDescription = strm.str();
-	mTransaction->HOCSendHandoverAck(mHandoverReference, 
-		gConfig.getNum("GSM.Identity.BSIC.BCC"),
-		gConfig.getNum("GSM.Identity.BSIC.NCC"),
-		gConfig.getNum("GSM.Radio.C0"),
-		stringWithChannelDescription.c_str());
+		
+	// SIP ack will be sent after all activities performed
 	
 	mNy1 = gConfig.getNum("GSM.Handover.Ny1");
 	mT3103 = Z100Timer(gConfig.getNum("GSM.Handover.T3103"));
@@ -717,6 +700,19 @@ void Handover::addHandover(HandoverEntry he){
 
 
 
+bool Handover::activeCallID(const char* callID){
+	ScopedLock lock(mLock);
+	HandoverEntryMap::iterator lp = mHandovers.begin();
+	while (lp != mHandovers.end()) {
+		if(strcmp(lp->second->callID(),callID)==0) return true;
+		lp++;
+	}
+	return false;
+}
+
+
+
+
 void Handover::handoverHandler(){
 	while(mRunning){
 
@@ -817,7 +813,7 @@ HandoverEntry* Handover::find_handover(unsigned wTN){
 		showHandovers();
 		return NULL;
 	}
-	LOG(WARNING) << "handover(TN=" << wTN << ") found, " << ", IMSI=" << lp->second->transaction()->subscriber() << "ref=" << lp->second->handoverReference();
+	LOG(WARNING) << "handover(TN=" << wTN << ") found, " << ", " << lp->second->transaction()->subscriber() << "HO ref=" << lp->second->handoverReference();
 	return (lp->second);
 }
 
@@ -826,7 +822,12 @@ void Handover::showHandovers(){
 	LOG(WARNING) << "active handovers:";
 	HandoverEntryMap::iterator lp = mHandovers.begin();
 	while (lp != mHandovers.end()) {
-		LOG(WARNING) << "position (ea TN) is " <<  lp->first << ", ref=" << lp->second->handoverReference() << ", IMSI=" << lp->second->transaction()->subscriber();
+		LOG(WARNING) << "position (ea TN) is " <<  lp->first << 
+			", HandoverReference=" << lp->second->handoverReference() << 
+			", " << lp->second->transaction()->subscriber();/* << 
+			", got HandoverAccess: " << mGotHA << 
+			", got HandoverComplete: " << mGotHComplete << 
+			;*/
 		lp++;
 	}
 }
