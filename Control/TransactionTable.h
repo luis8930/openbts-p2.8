@@ -96,6 +96,7 @@ class TransactionEntry {
 	bool mTerminationRequested;
 	
 	HandoverEntry *mHandoverEntry;
+	TransactionEntry *mOldTransaction;	// a link to original call, used for outgoing handovers
 
 	public:
 
@@ -139,8 +140,13 @@ class TransactionEntry {
 	TransactionEntry(const char* proxy,
 		const GSM::L3MobileIdentity& wSubscriber,
 		GSM::LogicalChannel* wChannel,
+		unsigned wL3TI,
 		const GSM::L3CMServiceType& wService);
 	void addHandoverEntry(HandoverEntry* wHandoverEntry);
+	
+	/** Form for "temporary" transaction to support outgoing handover*/
+	TransactionEntry(TransactionEntry *wOldTransaction, const char *IMSI,
+		unsigned wL3TI, short wDRTPPort, unsigned wCodec);
 	
 	/** Delete the database entry upon destruction. */
 	~TransactionEntry();
@@ -176,6 +182,11 @@ class TransactionEntry {
 
 	//const HandoverEntry * handoverEntry() const { return mHandoverEntry; }
 	HandoverEntry * handoverEntry() { return mHandoverEntry; }
+	
+	// needed to create a temporary transaction for outgoing handover
+	short destRTPPort() const { return mSIP.DestRTPPort(); }
+	short codec() const { return mSIP.codec(); }
+	TransactionEntry* callingTransaction() { return mOldTransaction; }
 	//@}
 
 
@@ -205,7 +216,13 @@ class TransactionEntry {
 	SIP::SIPState SOSSendACK() { return MOCSendACK(); }
 	void SOSInitRTP() { MOCInitRTP(); }
 
-
+	// few functions below are needed to serve outgoing handover inside a 
+	// "temporary" transaction
+	SIP::SIPState HOSendINVITE(string whichBTS);
+	SIP::SIPState HOWaitForOK();
+	SIP::SIPState HOSendACK();
+	SIP::SIPState HOSendREINVITE();
+	
 	SIP::SIPState MTCSendTrying();
 	SIP::SIPState MTCSendRinging();
 	SIP::SIPState MTCWaitForACK();
@@ -250,12 +267,12 @@ class TransactionEntry {
 	
 	/** acknowledge handover initiation; publish handoverReference + cellId + chanId */
 	SIP::SIPState HOCSendHandoverAck(unsigned handoverReference, unsigned BCC, unsigned NCC, unsigned C0, const char *channelDescription);
-	
 	/** drop handover-originated "call setup" */
 	SIP::SIPState HOCTimeout();
-	
 	/** complete handover-originated "call setup" and provide rtp endpoint*/
 	SIP::SIPState HOCSendHandoverComplete(short rtpPort);
+	
+	
 	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)
