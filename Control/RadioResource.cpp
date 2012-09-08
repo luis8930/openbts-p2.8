@@ -368,54 +368,35 @@ unsigned allocateRTPPorts(); // in CallControl.cpp
 void callManagementLoop(TransactionEntry *transaction, GSM::TCHFACCHLogicalChannel* TCH);	
 
 void Control::HandoverCompleteHandler(const GSM::L3HandoverComplete *confirm, GSM::LogicalChannel *DCCH){
-	LOG(ERR) << "(1) handover complete";
+	LOG(ERR) << "handover complete";
 	gBTS.handover().showHandovers();
 	
 	assert(confirm);
 	assert(DCCH);
-	/*
-	LOG(WARNING) << "handover complete handler, got " << *confirm;
-	
-	HandoverEntry* handoverEntry = gBTS.handover().find_handover(DCCH->TN()); // as there is nothing valuable inside the message
-	
-	LOG(WARNING) << "handover complete handler, he found(?)";
-	
-	TransactionEntry* transaction = handoverEntry->transaction();
-	
-	LOG(WARNING) << "handover complete handler, transaction found (?)";
-	*/
 	
 	TransactionEntry* transaction = gTransactionTable.find(DCCH);
 	if(transaction==NULL) {	
 		LOG(ERR) << "unable to resolve transaction for handover complete";
 		return;
 	}
-	LOG(ERR) << "(1) handover transaction" << transaction->invite();
-
-	LOG(ERR) << "(2) handover complete, transaction found";
 	gBTS.handover().showHandovers();			
 	
 	unsigned rtpPort = allocateRTPPorts();	
 //	GSM::TCHFACCHLogicalChannel *TCH = handoverEntry->channel();
 	// it will also do SIP Register, in another thread
 	
-	LOG(WARNING) << "(3) handover complete handler, processing Handover Complete";
 	gBTS.handover().showHandovers();			
 	
 	gBTS.handover().handoverComplete(DCCH->TN());
 	// TODO: ensure that mInvite is stored!
 	
-	LOG(WARNING) << "(4) handover complete handler";
 	gBTS.handover().showHandovers();			
 
 	transaction->HOCSendOK(rtpPort, SIP::RTPGSM610);
 
-	LOG(WARNING) << "(5) handover complete handler";
 	gBTS.handover().showHandovers();			
 
-	LOG(ERR) << "(2) handover transaction" << transaction->invite();
 	transaction->MTCInitRTP();	// ea obtain peers' rtp from mInvite
-	LOG(ERR) << "(3) handover transaction" << transaction->invite();
 
 	// continue as if it was a legacy call
 	callManagementLoop(transaction,(GSM::TCHFACCHLogicalChannel*)DCCH);
@@ -670,6 +651,7 @@ bool HandoverEntry::SipRegister(){
 			LOG(WARNING) << "handover: waiting for registration of " << IMSI << " on " << gConfig.getStr("SIP.Proxy.Registration");
 			// FIXME is there any reason to check result: extra t
 			mRegisterPerformed = engine.Register(SIPEngine::SIPRegister); 
+			LOG(WARNING) << "Register (handover) result is " << mRegisterPerformed;
 		}
 		catch(SIPTimeout) {
 			LOG(ALERT) "SIP registration timed out (handover), proxy is " << gConfig.getStr("SIP.Proxy.Registration");
@@ -952,7 +934,6 @@ bool Handover::addHandover(const char* callID, const char* IMSI, unsigned l3ti, 
 	
 	showHandovers();
 	mHandoverSignal.signal();
-	LOG(ERR) << "handover transaction " << transaction->invite();
 	return true;
 }
 
