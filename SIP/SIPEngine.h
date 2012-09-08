@@ -380,9 +380,6 @@ public:
 	/** Save a copy of a CANCEL message in the engine. */
 	void saveCANCEL(const osip_message_t *CANCEL, bool mine);
 
-	// debug only!!!
-	char* invite();
-
 	private:
 
 	/**

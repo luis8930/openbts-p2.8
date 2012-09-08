@@ -283,10 +283,6 @@ class TransactionEntry {
 	bool reinviteTarget(char *ip, char *port, unsigned *codec)
 		{ return mSIP.reinviteTarget(ip, port , codec);}
 	
-	// debug only!!!
-	char* invite() { ScopedLock lock(mLock); return mSIP.invite(); }
-
-	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)
 		{ ScopedLock lock(mLock); mSIP.saveINVITE(invite,local); }

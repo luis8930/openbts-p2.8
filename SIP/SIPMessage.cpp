@@ -466,13 +466,15 @@ osip_message_t * SIP::sip_invite( const char * dialed_number, short rtp_port, co
 	return request;	
 }
 
-osip_message_t * SIP::sip_handover(const char * dialed_number,
+osip_message_t * SIP::sip_handover(const char * dialed_number, const char * destBTS,
 	short rtp_port, const char * sip_username, short wlocal_port,
 	const char * local_ip, const char * proxy_ip,
 	const char * via_branch, const char * call_id, int cseq, unsigned codec) {
 
 	char local_port[10];
 	sprintf(local_port, "%i", wlocal_port);
+	
+	LOG(ERR) << "handover dest is " << destBTS;
 	
 	osip_message_t * request;
 	openbts_message_init(&request);
@@ -481,10 +483,8 @@ osip_message_t * SIP::sip_handover(const char * dialed_number,
 	request->sip_method = strdup("INVITE");
 	osip_message_set_version(request, strdup("SIP/2.0"));	
 	osip_uri_init(&request->req_uri);
-	osip_uri_set_host(request->req_uri, strdup(proxy_ip));
+	osip_uri_set_host(request->req_uri, strdup(destBTS));
 	osip_uri_set_username(request->req_uri, strdup(dialed_number));
-
-	LOG(ERR) << "handover message is" << request->message;
 
 	// VIA
 	osip_via_t * via;
@@ -507,8 +507,6 @@ osip_message_t * SIP::sip_handover(const char * dialed_number,
 	osip_from_init(&request->from);
 	osip_from_set_displayname(request->from, strdup(sip_username));
 
-	LOG(ERR) << "handover message is" << request->message;
-	
 	// FROM TAG
 	osip_from_init(&request->from);
 	osip_from_set_displayname(request->from, strdup(sip_username));
@@ -521,7 +519,7 @@ osip_message_t * SIP::sip_handover(const char * dialed_number,
 	osip_to_init(&request->to);
 	osip_to_set_displayname(request->to, strdup(""));
 	osip_uri_init(&request->to->url);
-	osip_uri_set_host(request->to->url, strdup(proxy_ip));
+	osip_uri_set_host(request->to->url, strdup(destBTS));
 	osip_uri_set_username(request->to->url, strdup(dialed_number));
 
 	// If response, we need a to tag.
@@ -593,8 +591,6 @@ osip_message_t * SIP::sip_handover(const char * dialed_number,
 	osip_free(sdp_str);
 	osip_message_set_content_type(request, strdup("application/sdp"));
 
-	LOG(ERR) << "handover message is" << request->message;
-
 	return request;	
 }
 
@@ -603,8 +599,6 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 	
 	char local_port[10];
 	sprintf(local_port, "%i", rtp_port);
-
-	LOG(ERR) << "creating handover re-invite(1)";
 	
 	osip_message_t * request;
 	openbts_message_init(&request);
@@ -612,20 +606,15 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 	request->message_property = 2;
 	request->sip_method = strdup("INVITE");
 	osip_message_set_version(request, strdup("SIP/2.0"));	
-	osip_uri_init(&request->req_uri);
-
-	LOG(ERR) << "handover re-invite is" << request->message;
-
+	osip_uri_clone(invite->req_uri, &request->req_uri);
 	
+	//osip_via_clone(invite->vias, &request->vias);
 	osip_via_t * via;
 	char * via_str;
 	osip_message_get_via(invite, 0, &via);
 	osip_via_to_str(via, &via_str);
 	osip_message_set_via(request, via_str);	
 	osip_free(via_str);
-
-	LOG(ERR) << "handover re-invite is" << request->message;
-
 	
 	osip_from_clone(invite->from, &request->from);
 	osip_to_clone(invite->to, &request->to);
@@ -637,8 +626,6 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 	char temp_buf[14];
 	sprintf(temp_buf,"%i",cseq);
 	osip_cseq_set_number(request->cseq, strdup(temp_buf));	
-
-	LOG(ERR) << "handover re-invite is" << request->message;
 	
 	osip_contact_t *contact;
 	char *contact_str;
@@ -646,8 +633,7 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 	osip_contact_to_str(contact, &contact_str);
 	osip_message_set_contact(request, contact_str);
 	osip_free(contact_str);
-	
-	
+
 	
 	sdp_message_t * sdp;
 	sdp_message_init(&sdp);
@@ -688,8 +674,6 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 	osip_free(sdp_str);
 	osip_message_set_content_type(request, strdup("application/sdp"));
 
-	LOG(ERR) << "handover re-invite is" << request->message;
-	LOG(ERR) << "creating handover re-invite(10)";
 	return request;
 }
 

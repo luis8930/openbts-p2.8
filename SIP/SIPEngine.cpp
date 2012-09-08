@@ -736,26 +736,21 @@ SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short 
 	
 	mCallID = tmp;
 
-	LOG(ERR) << "creating SIP engine for outgoing handover, 1 ";
-
 	if (!resolveAddress(&mProxyAddr,proxy)) {
 		LOG(ALERT) << "outgoing handover cannot resolve IP address for " << proxy;
 		return;
 	}
-	LOG(ERR) << "creating SIP engine for outgoing handover, 2 ";
-
+	
 	char host[256];
 	const char* ret = inet_ntop(AF_INET,&(mProxyAddr.sin_addr),host,255);
 	if (!ret) {
 		LOG(ALERT) << "outgoing handover cannot translate proxy IP address";
 		return;
 	}
-	LOG(ERR) << "creating SIP engine for outgoing handover, 3 ";
-	
+
 	mProxyIP = string(host);
 	mProxyPort = ntohs(mProxyAddr.sin_port);
-	LOG(ERR) << "creating SIP engine for outgoing handover, 4 ";
-
+	
 	// generate a tag now
 	make_tag(tmp);
 	mMyTag=tmp;	
@@ -764,7 +759,6 @@ SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short 
 
 	//to make sure noise doesn't magically equal a valid RTP port
 	mRTPPort = 0;
-	LOG(ERR) << "creating SIP engine for outgoing handover, done ";
 }
 
 SIPState SIPEngine::HOSendINVITE(string whichBTS)
@@ -778,11 +772,16 @@ SIPState SIPEngine::HOSendINVITE(string whichBTS)
 	mViaBranch = tmp;
 	mCSeq++;
 	
-	LOG(DEBUG) << "mRemoteUsername=" << mRemoteUsername;
-	LOG(DEBUG) << "mSIPUsername=" << mSIPUsername;
+	mRemoteDomain = whichBTS.c_str();
+	mRemoteUsername =mSIPUsername;
+	
+	LOG(ERR) << "mRemoteUsername=" << mRemoteUsername;
+	LOG(ERR) << "mSIPUsername=" << mSIPUsername;
+	LOG(ERR) << "handover target BTS is " << whichBTS.c_str();
 
 	osip_message_t * invite = sip_handover(
-		mSIPUsername.c_str(), mDRTPPort, mSIPUsername.c_str(), 
+		mSIPUsername.c_str(), whichBTS.c_str(),
+		mDRTPPort, mSIPUsername.c_str(), 
 		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
 		mViaBranch.c_str(), mCallID.c_str(), mCSeq, mCodec); 
 
@@ -821,12 +820,6 @@ bool SIPEngine::reinviteTarget(char *ip, char *port, unsigned *codec){
 	return get_rtp_params(mLastResponse, port, ip);
 }
 
-char * SIPEngine::invite(){
-	osip_body_t * body = (osip_body_t*)osip_list_get(&mINVITE->bodies, 0);
-	if (!body) return "no body";
-	char * ho_str = body->body;
-	return ho_str;
-}
 SIPState  SIPEngine::HOWaitForOK()
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
