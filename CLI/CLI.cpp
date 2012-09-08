@@ -802,39 +802,32 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 
 	GSM::L3MobileIdentity mobileID(argv[1]);
 	
+	// find transaction which serves a call leg
 	Control::TransactionEntry* transaction= gTransactionTable.find(mobileID,GSM::Active);
 	if(transaction==NULL) {
 		os << "handover(CLI): transaction with IMSI not found " << argv[1];
 		return BAD_NUM_ARGS;
 	} 
 	
+	// fetch key params for handover
 	LOG(ERR) << "\"old\" handover transaction: " << *transaction;
 	os << "\"old\" handover transaction: " << *transaction;
 	unsigned codec = transaction->codec();
-	LOG(ERR) << "\"old\" handover transaction: (1)" << *transaction;
 	short destRTPPort = transaction->destRTPPort();
-	LOG(ERR) << "\"old\" handover transaction: (2)" << *transaction;
 	unsigned l3ti = transaction->L3TI();
-	LOG(ERR) << "\"old\" handover transaction, L3TI: " << l3ti;
-	LOG(ERR) << "\"old\" handover transaction, dest RTP" << destRTPPort;
-	LOG(ERR) << "\"old\" handover transaction, codec" << codec;
+
+	// get somewhere SIP ip:port of the desired cell
+	string whichBTS = "192.168.10.3:5062";
 	
+	// create a temporary transaction and start the procedure
 	Control::TransactionEntry *newTransaction= 
-		new Control::TransactionEntry(transaction, argv[1],
-		l3ti,
-		destRTPPort,
-		codec);
-	os << "\"temporary\" transaction ceated";
-	LOG(ERR) << "\"temporary\" transaction ceated";
+		new Control::TransactionEntry(transaction, mobileID, 
+			whichBTS,
+			l3ti, destRTPPort, codec);
+	os << "\"temporary\" transaction created, handover Invite sent";
+	LOG(ERR) << "\"temporary\" transaction created, handover Invite sent";
 	
-	//os << "\"temporary\" transaction" << *newTransaction;
-		
-	string whichBTS = "127.0.0.1";
-	newTransaction->HOSendINVITE(whichBTS);
-	
-	LOG(ERR) << "CLI: handover Invite sent";
-	os << "handover Invite sent";
-	
+	//newTransaction->HOSendINVITE(whichBTS);
 	Control::HOController(newTransaction);
 	
 	

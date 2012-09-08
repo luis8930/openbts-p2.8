@@ -221,6 +221,38 @@ void SIPInterface::write(const struct sockaddr_in* dest, osip_message_t *msg)
 
 
 
+/** this function is used to send responses, when address must be fetched from VIA */
+void SIPInterface::write(osip_message_t *msg) 
+{
+	struct sockaddr_in dest;
+	char * str;
+	size_t msgSize;
+	
+	LOG(ERR) << "handover ack write()";
+	// Get Record Route.
+	osip_via_t * via;
+	osip_message_get_via(msg, 0, &via);
+	
+//	LOG(ERR) << "handover " << via.c_str();
+	
+	if (! resolveAddress(&dest, via->host, atoi(via->port))) {
+		LOG(ERR) << "handover cannot resolve IP address to reply ";
+		return;
+	}
+	
+	osip_message_to_str(msg, &str, &msgSize);
+	if (!str) {
+		LOG(ERR) << "osip_message_to_str produced a NULL pointer.";
+		return;
+	}
+	mSocketLock.lock();
+	mSIPSocket.send((const struct sockaddr*)&dest,str);
+	mSocketLock.unlock();
+	free(str);
+}
+
+
+
 
 void SIPInterface::drive() 
 {
@@ -363,7 +395,7 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 	
 	unsigned l3ti;
 	sscanf(callIDNum+strlen(HANSOVER_SIGNATURE),"%d",&l3ti);
-	if(!l3ti) return false;
+//	if(!l3ti) return false;
 	
 	// this is really a request for handover
 
@@ -385,86 +417,34 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 		LOG(WARNING) << "Incoming INVITE (handover) with no IMSI";
 		return false;
 	}
-	L3MobileIdentity mobileID(IMSI);
-
+	
 	LOG(WARNING) << "handover INVITE detected, callID=" << callIDNum << 
-		", IMSI=" << mobileID << ", L3TI=" << l3ti;
+		", IMSI=" << IMSI << ", L3TI=" << l3ti;
 
 	// TO DO: if callIDNum is known, it can be ether:
 	// - a copy of handover setup
 	// - re-invite
 	// if no active handover with this callID, try to treat is as RE-INVITE
 	// otherwise just ignore it
-	if(! gBTS.handover().activeCallID(callIDNum)){
+/*	if(! gBTS.handover().activeCallID(callIDNum)){
 		// process re-invite
 		LOG(WARNING) << "re-invite for handover originated call " << callIDNum;
 		LOG(ERR) << "not yet implemented";
 		return true;
 	}
-	
-	// 1) allocate Handover Reference
-	unsigned handoverReference = gBTS.handover().allocateHandoverReference();
-	
-	if(! handoverReference) {
-		// FIXME -- Send appropriate error on SIP interface.
-		LOG(WARNING) << "SIP: refusing to place handover";
-		return false;
-	}
-	
-	// 2) allocate a channel
-	GSM::TCHFACCHLogicalChannel *TCH = NULL;
-	TCH = gBTS.getTCH();
-	if (TCH==NULL) {
-		// FIXME -- Send appropriate error on SIP interface.
-		LOG(WARNING) << "unable to allocate channel for handover";
-		return false;
-	}
-	// if the old handover-originated call finished at the same channel, 
-	// but SIP Register still needs to be done
-	if(gBTS.handover().find_handover(TCH->TN())){
-		// FIXME -- Send appropriate error on SIP interface.
-		LOG(WARNING) << "some handover activities at the idle channel" << TCH->TN();
-		return false;
-	}
-	TCH->open();
-	
-	// 3) create a transaction
-	Control::TransactionEntry *transaction = new Control::TransactionEntry(
-		gConfig.getStr("SIP.Proxy.SMS").c_str(),
-		mobileID,
-		TCH,
-		l3ti,
-		GSM::L3CMServiceType::HandoverOriginatedCall);
-	
-	// handover transaction has callerNumber==calledNumber
-	transaction->SIPUser(callIDNum,IMSI,IMSI,callerHost);
-	transaction->saveINVITE(msg,false);
-	
-	// fill it with SIP details - not now
-	
-	// 4) acknowledge handover(ea provide the details), start handover
-	Control::HandoverEntry *handover = 
-		new Control::HandoverEntry(transaction,TCH,handoverReference,callIDNum);
-	transaction->addHandoverEntry(handover);	// provide a value to transaction
-	gBTS.handover().addHandover(*handover);		// add handover for processing
-		
-	// HO Ref, Cell Id, ChannelID - all the donor site needs to know now	
+*/	
+	// this fuction will
+	// - allocate channel
+	// - allocate handover reference
+	// - create transaction
+	// - create handoverEntry and place it
+	// - link transaction and handover entry
+	// - send Ack (ea Proceeding
 	addCall(callIDNum);
-	
-	LOG(WARNING) << "handover, sending ack";
-	std::ostringstream strm;
-	TCH->channelDescription().text(strm);
-	std::string stringWithChannelDescription = strm.str();
-	transaction->HOCSendHandoverAck(handoverReference, 
-		gConfig.getNum("GSM.Identity.BSIC.BCC"),
-		gConfig.getNum("GSM.Identity.BSIC.NCC"),
-		gConfig.getNum("GSM.Radio.C0"),
-		stringWithChannelDescription.c_str());
+	gBTS.handover().addHandover(callIDNum,IMSI,l3ti,callerHost,msg);
+		
 
-	
-	
-	
-	
+
 	return true;
 }
 

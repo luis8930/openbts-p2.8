@@ -1023,10 +1023,13 @@ SIPState SIPEngine::HOSendINVITE(string whichBTS)
 	// Send Invite.
 
 
-	if (! resolveAddress(&mHOtoBTSAddr, whichBTS.c_str(), mSIPPort)) {
+//	if (! resolveAddress(&mHOtoBTSAddr, whichBTS.c_str(), mSIPPort)) {
+	if (! resolveAddress(&mHOtoBTSAddr, whichBTS.c_str())) {
 		LOG(ALERT) << "handover cannot resolve IP address for " << whichBTS;
 		return mState;
-	}	
+	}
+	gSIPInterface.addCall(mCallID);
+	
 	gSIPInterface.write(&mHOtoBTSAddr,invite);
 	saveINVITE(invite,true);
 	osip_message_free(invite);
@@ -1034,6 +1037,28 @@ SIPState SIPEngine::HOSendINVITE(string whichBTS)
 	return mState;
 };
 
+bool SIPEngine::handoverTarget(char *cell, char *chan , unsigned *reference){
+	if(mLastResponse == NULL) return false;
+	if(mLastResponse->status_code != 183) return false;
+	return get_handover_params(mLastResponse, cell, chan , reference);
+}
+
+bool SIPEngine::reinviteTarget(char *ip, char *port, unsigned *codec){
+	if(mLastResponse == NULL) {
+		LOG(ERR) << "no last response";
+		return false;
+	}
+	*codec = RTPGSM610;
+	LOG(ERR) << "last response is" << mLastResponse;
+	return get_rtp_params(mLastResponse, port, ip);
+}
+
+char * SIPEngine::invite(){
+	osip_body_t * body = (osip_body_t*)osip_list_get(&mINVITE->bodies, 0);
+	if (!body) return "no body";
+	char * ho_str = body->body;
+	return ho_str;
+}
 SIPState  SIPEngine::HOWaitForOK()
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
@@ -1143,10 +1168,10 @@ SIPState SIPEngine::MODWaitForERRORACK(bool cancel, Mutex *lock)
 	return mState;
 }
 
-SIPState SIPEngine::HOSendREINVITE()
+SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
-/*	
+	
 	// Set Invite params. 
 	// new CSEQ and codec 
 	char tmp[50];
@@ -1157,19 +1182,15 @@ SIPState SIPEngine::HOSendREINVITE()
 	LOG(DEBUG) << "mRemoteUsername=" << mRemoteUsername;
 	LOG(DEBUG) << "mSIPUsername=" << mSIPUsername;
 
-	osip_message_t * invite = sip_handover(
-		mRemoteUsername.c_str(), mRTPPort, mSIPUsername.c_str(), 
-		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
-		mMyTag.c_str(), mViaBranch.c_str(), mCallID.c_str(), mCSeq, mCodec); 
+	osip_message_t * invite = sip_reinvite_mo( mINVITE, mCSeq,
+		mSIPUsername.c_str(), mSIPIP.c_str(),
+		ip, port, codec);
+	LOG(ERR) << "handover re-invite is " << invite->message;
 
-	
-	// Send Invite.
-
-	gSIPInterface.write(&mHOtoBTSAddr,invite);
-	saveINVITE(invite,true);
+	gSIPInterface.write(&mProxyAddr,invite);
 	osip_message_free(invite);
-	mState = HO_Initiated;
-*/	
+	//mState = ;
+	
 	return mState;
 };
 
@@ -1179,14 +1200,40 @@ SIPState SIPEngine::HOCSendProceeding(const char *body)
 	LOG(ERR) << "ack'ing handover, user " << mSIPUsername 
 		<< " state " << mState
 		<< "target " << body;
-	if (mINVITE==NULL) mState=Fail;
+	if (mINVITE==NULL) {
+		mState=Fail;
+		LOG(ERR) << "handover, mINVITE is NULL";
+	}
 	if (mState==Fail) return mState;
+	LOG(ERR) << "handover, preparing proceeeding";
+	
 	osip_message_t * proceeding = sip_proceeding(mINVITE, mSIPUsername.c_str(), mProxyIP.c_str(),body);
-	gSIPInterface.write(&mProxyAddr,proceeding);
+	// get ip:port from VIA, as we have to respond directly
+	LOG(ERR) << "handover, proceeeding is ready";
+	
+	gSIPInterface.write(proceeding);
 	osip_message_free(proceeding);
 	mState=Proceeding;
 	return mState;
 }
+
+SIPState SIPEngine::HOCSendOK( short wRTPPort, unsigned wCodec )
+{
+	LOG(ERR) << "200 OK handover " << mSIPUsername;
+	assert(mINVITE);
+	mRTPPort = wRTPPort;
+	mCodec = wCodec;
+	LOG(DEBUG) << "port=" << wRTPPort << " codec=" << mCodec;
+	// Form ack from invite and new parameters.
+	osip_message_t * okay = sip_okay_sdp(mINVITE, mSIPUsername.c_str(),
+		mSIPIP.c_str(), mSIPPort, mRTPPort, mCodec);
+	gSIPInterface.write(okay);	// send directly to BTS
+	osip_message_free(okay);
+	mState=Connecting;
+	return mState;
+}
+
+
 
 
 SIPState SIPEngine::MTDCheckBYE()
@@ -1466,6 +1513,7 @@ void SIPEngine::InitRTP(const osip_message_t * msg )
 
 	char d_ip_addr[20];
 	char d_port[10];
+	LOG(ERR) << "calling get_rtp_params";
 	get_rtp_params(msg, d_port, d_ip_addr);
 	LOG(DEBUG) << "IP="<<d_ip_addr<<" "<<d_port<<" "<<mRTPPort;
 	mDRTPPort = atoi(d_port);

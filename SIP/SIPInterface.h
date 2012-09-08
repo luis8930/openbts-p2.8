@@ -188,6 +188,8 @@ public:
 	// then call si.read(call_id)
 
 	void write(const struct sockaddr_in*, osip_message_t*);
+	// this function is desired to send responses, when address is fetched from VIA
+	void write(osip_message_t*);
 
 	osip_message_t* read(const std::string& call_id, unsigned readTimeout, Mutex *lock=NULL)
 		{ return mSIPMap.read(call_id, readTimeout, lock); }

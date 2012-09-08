@@ -183,6 +183,10 @@ public:
 	/** Set generate call ID for outgoing handover */
 	SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short wDestRTP, unsigned wCodec);
 	
+	/** fetch parameters for Handover Command */
+	bool handoverTarget(char *cell, char *chan , unsigned *reference);
+	/** fetch parameters for re-invite during handover */
+	bool reinviteTarget(char *ip, char *port, unsigned *codec);
 	/**@name Messages for SIP registration. */
 	//@{
 
@@ -289,6 +293,8 @@ public:
 	SIPState MTCSendOK();
 
 	//@}
+	
+	SIPState HOCSendOK(short rtpPort, unsigned codec);
 
 
 
@@ -330,7 +336,7 @@ public:
 	SIPState HOSendINVITE(string whichBTS);
 	SIPState HOWaitForOK();
 	SIPState HOSendACK();
-	SIPState HOSendREINVITE();
+	SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
 	
 	// sip body must contain target cell parameters for handover
 	SIPState HOCSendProceeding(const char *body);

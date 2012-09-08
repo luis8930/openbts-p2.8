@@ -68,6 +68,7 @@ class TransactionEntry;
 /** handover entry, placed when handover is requested from outside and removed when handoved complete message got at DCCH*/
 class HandoverEntry{
 	private:
+	mutable Mutex mLock;
 	
 	int mInitialTA;
 	//GSM::L3PhysicalInformation mPhysicalInformation;
@@ -121,7 +122,7 @@ class HandoverEntry{
 	/** must be called from
 	 * file DCCHDispatch.cpp
 	 * stop sending Physical Info, T3103 timer, try to perform SIP Register */
-	void HandoverCompleteDetected(short wRtpPort);
+	void HandoverCompleteDetected();
 	
 	GSM::TCHFACCHLogicalChannel* channel() const { return mTCH; }
 	
@@ -133,48 +134,51 @@ class HandoverEntry{
 	TransactionEntry* transaction(){ return mTransaction; }
 	
 	const char *callID() const { return mCallID; }
+	
+	void status(const char *intro);
 };
 
 
-//typedef std::list<HandoverEntry> HandoverEntryList;
-class HandoverEntryMap : public std::map<unsigned,HandoverEntry*> {};
+typedef std::list<HandoverEntry> HandoverEntryList;
+//class HandoverEntryMap : public std::map<unsigned,HandoverEntry*> {};
 
 
 class Handover{
 	public:
-	
-	Handover()
+		
+		Handover()
 		:mRunning(false), mT3105(gConfig.getNum("GSM.Handover.T3105")), mHandoverReference(1)
-	{}
-	
-	void start();
-
-	unsigned allocateHandoverReference();
-	
-	void addHandover(HandoverEntry he);
-	
-	void showHandovers();
-	
-	HandoverEntry *find_handover(unsigned wTN);
-	
-	bool activeCallID(const char* callID);
-	
+		{}
+		
+		void start();
+		
+		// 29/08/2012
+		bool addHandover(const char* CallID, const char* IMSI, unsigned l3ti, const char* callerHost, void* msg);
+		
+		void handoverAccess(unsigned wTN, int initialTA);
+		
+		void handoverComplete(unsigned wTN);
+		
+		void showHandovers();
+			
 	private:
+		unsigned allocateHandoverReference();
 
-	HandoverEntryMap mHandovers;		///< active handovers.
-	mutable Mutex mLock;			///< Lock for thread-safe access.
-	Signal mHandoverSignal;			///< signal to wake the loop
-	Thread mHandoverThread;			///< Thread for the loop.
-	volatile bool mRunning;
+		//HandoverEntryMap mHandovers;		///< active handovers.
+		HandoverEntryList mHandovers;		///< active handovers.
+		mutable Mutex mLock;			///< Lock for thread-safe access.
+		Signal mHandoverSignal;			///< signal to wake the loop
+		Thread mHandoverThread;			///< Thread for the loop.
+		volatile bool mRunning;
 	
-	unsigned mHandoverReference;		///< variable for allocating new referencies		
+		unsigned mHandoverReference;		///< variable for allocating new referencies		
 	
-	/** !! Attention: in usec needed here */
-	unsigned mT3105;			///< a value in usecs to sleep between sending PhysicalInfo
+		/** !! Attention: in usec needed here */
+		unsigned mT3105;			///< a value in usecs to sleep between sending PhysicalInfo
 	
-	friend void *HandoverServiceLoop(Handover *);
+		friend void *HandoverServiceLoop(Handover *);
 	
-	void handoverHandler();
+		void handoverHandler();
 };
 
 void *HandoverServiceLoop(Handover *);
