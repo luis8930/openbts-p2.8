@@ -95,7 +95,7 @@ class TransactionEntry {
 
 	bool mTerminationRequested;
 	
-	HandoverEntry *mHandoverEntry;
+//	HandoverEntry *mHandoverEntry;
 	TransactionEntry *mOldTransaction;	// a link to original call, used for outgoing handovers
 
 	public:
@@ -142,10 +142,12 @@ class TransactionEntry {
 		GSM::LogicalChannel* wChannel,
 		unsigned wL3TI,
 		const GSM::L3CMServiceType& wService);
-	void addHandoverEntry(HandoverEntry* wHandoverEntry);
+//	void addHandoverEntry(HandoverEntry* wHandoverEntry);
 	
 	/** Form for "temporary" transaction to support outgoing handover*/
-	TransactionEntry(TransactionEntry *wOldTransaction, const char *IMSI,
+	TransactionEntry(TransactionEntry *wOldTransaction, 
+		const GSM::L3MobileIdentity& wSubscriber,
+		string whichBTS,
 		unsigned wL3TI, short wDRTPPort, unsigned wCodec);
 	
 	/** Delete the database entry upon destruction. */
@@ -181,7 +183,7 @@ class TransactionEntry {
 	void GSMState(GSM::CallState wState);
 
 	//const HandoverEntry * handoverEntry() const { return mHandoverEntry; }
-	HandoverEntry * handoverEntry() { return mHandoverEntry; }
+//	HandoverEntry * handoverEntry() { return mHandoverEntry; }
 	
 	// needed to create a temporary transaction for outgoing handover
 	short destRTPPort() const { return mSIP.DestRTPPort(); }
@@ -221,7 +223,7 @@ class TransactionEntry {
 	SIP::SIPState HOSendINVITE(string whichBTS);
 	SIP::SIPState HOWaitForOK();
 	SIP::SIPState HOSendACK();
-	SIP::SIPState HOSendREINVITE();
+	SIP::SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
 	
 	SIP::SIPState MTCSendTrying();
 	SIP::SIPState MTCSendRinging();
@@ -270,9 +272,20 @@ class TransactionEntry {
 	/** drop handover-originated "call setup" */
 	SIP::SIPState HOCTimeout();
 	/** complete handover-originated "call setup" and provide rtp endpoint*/
-	SIP::SIPState HOCSendHandoverComplete(short rtpPort);
+	SIP::SIPState HOCSendOK(short rtpPort, unsigned codec);
+	
+	// Send Handover Command to move the current call
+	void HOSendHandoverCommand(GSM::L3CellDescription wCell, GSM::L3ChannelDescription wChan, unsigned wHandoverReference);
 	
 	
+	bool handoverTarget(char *cell, char *chan , unsigned *reference) 
+		{ return mSIP.handoverTarget(cell, chan , reference);}
+	bool reinviteTarget(char *ip, char *port, unsigned *codec)
+		{ return mSIP.reinviteTarget(ip, port , codec);}
+	
+	// debug only!!!
+	char* invite() { ScopedLock lock(mLock); return mSIP.invite(); }
+
 	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)

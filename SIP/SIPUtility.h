@@ -63,6 +63,8 @@ bool get_owner_ip( osip_message_t * msg, char * o_addr );
 /** Get RTP parameters; return NULL if none found. */
 bool get_rtp_params(const osip_message_t * msg, char * port, char * ip_addr );
 
+bool get_handover_params(const osip_message_t * msg, char * cell, char * chan , unsigned *reference);
+
 void make_tag( char * tag );
 
 void make_branch(char * branch);

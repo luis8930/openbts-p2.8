@@ -187,8 +187,8 @@ bool L1Decoder::decodeRACHBurst(const RxBurst &burst, Parity &wParity, BitVector
 
 	// Check the tail bits -- should all the zero.
 	if (wU.peekField(14,4)) {
-		OBJLOG(INFO) << "RACH decode wrong tail bits\n";
-		return false;
+		OBJLOG(ERR) << "RACH decode wrong tail bits" << wU.peekField(14,4);
+		//return false;
 	}
 
 	// Check the parity.
@@ -197,8 +197,8 @@ bool L1Decoder::decodeRACHBurst(const RxBurst &burst, Parity &wParity, BitVector
 	unsigned checkParity = wD.parity(wParity);
 	unsigned encodedBSIC = (sentParity ^ checkParity) & 0x03f;
 	if (encodedBSIC != gBTS.BSIC()) {
-		OBJLOG(INFO) << "RACH decode wrong parity: "<< sentParity << ", "<< checkParity <<", " << encodedBSIC << "\n";
-		return false;
+		OBJLOG(ERR) << "RACH decode wrong parity: "<< sentParity << ", "<< checkParity <<", " << encodedBSIC << ", BSCI" << gBTS.BSIC();
+		//return false;
 	}
 
 	// We got a valid RACH burst.
@@ -507,7 +507,7 @@ void RACHL1Decoder::writeLowSide(const RxBurst& burst)
 	unsigned RA;
 	if(decodeRACHBurst(burst, mParity, mU, mD, RA)){
 		countGoodFrame();
-		OBJLOG(INFO) <<"RACHL1Decoder received RA=" << RA << " at time " << burst.time()
+		OBJLOG(ERR) <<"RACHL1Decoder received RA=" << RA << " at time " << burst.time()
 		<< " with RSSI=" << burst.RSSI() << " timingError=" << burst.timingError();
 		gBTS.channelRequest(new Control::ChannelRequestRecord(RA,burst.time(),burst.RSSI(),burst.timingError()));
 	}
@@ -1066,13 +1066,13 @@ TCHFACCHL1Decoder::TCHFACCHL1Decoder(
 
 void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst)
 {
-	OBJLOG(DEBUG) << "TCHFACCHL1Decoder " << inBurst;
+	OBJLOG(INFO) << "TCHFACCHL1Decoder " << inBurst;
 	// If the channel is closed, ignore the burst.
 	if (!active()) {
              if(gTRX.ARFCN()->handover(TN()) )        // just for evaluating; it might be reasonable to activate TCH for handover
                  processBurst(inBurst);
              else
-		OBJLOG(DEBUG) << "TCHFACCHL1Decoder not active, ignoring input";
+		OBJLOG(ERR) << "TCHFACCHL1Decoder not active, ignoring input, tn=" << TN();
 		return;
 	}
 	processBurst(inBurst);
@@ -1091,6 +1091,7 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	// We could do that as a double-check against putting garbage into
 	// the interleaver or accepting bad parameters.
 
+	//OBJLOG(ERR) << "burst at tn=" << TN();
 	if(gTRX.ARFCN()->handover( TN() )){
 		OBJLOG(ERR) << "Trying to decode as Access Burst, same TN()";
 		
@@ -1104,13 +1105,15 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 				if (initialTA<0) initialTA=0;
 				if (initialTA>62) initialTA=62;
 				
-				Control::HandoverEntry *he = gBTS.handover().find_handover(TN());
-				if(he) he->HandoverAccessDetected(initialTA);
-				else OBJLOG(ERR) << "unable to find handover entry @" << TN();
+				gBTS.handover().handoverAccess(TN(),initialTA);
+				//Control::HandoverEntry *he = gBTS.handover().find_handover(TN());
+				//if(he) he->HandoverAccessDetected(initialTA);
+				//else OBJLOG(ERR) << "unable to find handover entry @" << TN();
 			}
 			else OBJLOG(ERR) <<"Wrong handover Reference " << HR << "\n";
 		return false;}
 	}
+//	else OBJLOG(ERR) << "Normal burst!!!";
 	
 	// The reverse index runs 0..7 as the bursts arrive.
 	// It is the "B" index of GSM 05.03 3.1.3 and 3.1.4.

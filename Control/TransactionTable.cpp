@@ -389,10 +389,10 @@ SIP::SIPState TransactionEntry::HOSendINVITE(string whichBTS)
 	return state;
 }
 
-SIP::SIPState TransactionEntry::HOSendREINVITE()
+SIP::SIPState TransactionEntry::HOSendREINVITE(char *ip, short port, unsigned codec)
 {
 	ScopedLock lock(mLock);
-	SIP::SIPState state = mSIP.HOSendREINVITE();
+	SIP::SIPState state = mSIP.HOSendREINVITE(ip, port, codec);
 	echoSIPState(state);
 	return state;
 }
@@ -624,16 +624,18 @@ TransactionEntry::TransactionEntry(const char* proxy,
 }
 
 
-TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction, const char *IMSI,
+TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction, 
+	const GSM::L3MobileIdentity& wSubscriber,
+	string whichBTS,
 	unsigned wL3TI, short wDRTPPort, unsigned wCodec)
 	:mOldTransaction(wOldTransaction),
+	mSubscriber(wSubscriber),
 	mL3TI(wOldTransaction->L3TI()),
-	mSIP(gConfig.getStr("SIP.Proxy.Speech").c_str(),IMSI ,
+	mSIP(whichBTS.c_str(),mSubscriber.digits() ,
 		wL3TI, wDRTPPort, wCodec),
 	mID(gTransactionTable.newID()),
-//	mSubscriber(wOldTransaction->subscriber()),mService(GSM::L3CMServiceType::OutgoingHandover),
+	mService(GSM::L3CMServiceType::OutgoingHandover),
 //	mCalled(wCalled),
-
 //	mGSMState(GSM::MOCInitiated),
 	mNumSQLTries(gConfig.getNum("Control.NumSQLTries")),
 //	mChannel(wChannel),
@@ -641,6 +643,8 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction, const char
 
 {
 	LOG(ERR) << "\"temporary\" transaction for outgoing handover, created";
+	
+	HOSendINVITE(whichBTS);
 /*	mL3TI = wOldTransaction->L3TI();
 	LOG(WARNING) << "need to copy (IMSI, ip, dest rtp, codec)" << wOldTransaction->sipEngine().DestRTPPort();
 	mSIP = new SIP::SIPEngine(
@@ -651,13 +655,13 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction, const char
 		wOldTransaction->sipEngine().codec());	
 */
 }
-
+/*
 void TransactionEntry::addHandoverEntry(HandoverEntry * wHandoverEntry){
 	mHandoverEntry = wHandoverEntry;
 	
 	LOG(WARNING) << "handover: linking transaction " << this->mChannel << "with handover " << mHandoverEntry->handoverReference();
 }
-
+*/
 
 SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference, 
 		unsigned wBCC, unsigned wNCC, unsigned wC0,
@@ -670,12 +674,14 @@ SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference,
 		", NCC=" << wNCC <<
 		", C0=" << wC0 << 
 		"\n\t Channel: " << *channelDescription;
-	
 	char buf[300];
-	sprintf(buf,"cell:%d/%d/%d\nchan=%s\nreference=%d\n",wBCC,wNCC,wC0,channelDescription,wHandoverReference);
+	sprintf(buf,"cell: BCC=%d NCC=%d ARFCN=%d\nchan: %s\nreference: %d\n",wBCC,wNCC,wC0,channelDescription,wHandoverReference);
 
 	ScopedLock lock(mLock);
 	SIP::SIPState state = mSIP.HOCSendProceeding(buf);
+	
+//	mHandoverEntry->status("handover, prep. chan desc(7)");
+	
 	echoSIPState(state);
 	return state;
 
@@ -683,9 +689,12 @@ SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference,
 
 
 
-SIP::SIPState TransactionEntry::HOCSendHandoverComplete(short rtpPort){
-
-	LOG(WARNING) << "SIP, 200 ok for handovers' INVITE ";
+SIP::SIPState TransactionEntry::HOCSendOK(short rtpPort, unsigned codec){
+	LOG(ERR) << "sending 200 OK (handover completed), port=" << rtpPort << ", codec=" << codec;
+	ScopedLock lock(mLock);
+	SIP::SIPState state = mSIP.HOCSendOK(rtpPort,codec);
+	echoSIPState(state);
+	return state;
 }
 
 
@@ -696,7 +705,14 @@ SIP::SIPState TransactionEntry::HOCTimeout(){
 }
 
 
+// Send Handover Command to move the current call
+void TransactionEntry::HOSendHandoverCommand(GSM::L3CellDescription wCell,
+		GSM::L3ChannelDescription wChan, unsigned wHandoverReference){
 
+	LOG(ERR) << "handover Command, " << wCell << ", " << wChan << ", " << wHandoverReference;
+	
+	mChannel->send(L3HandoverCommand(wCell, wChan, wHandoverReference));
+}
 
 
 

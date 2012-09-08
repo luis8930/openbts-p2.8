@@ -61,6 +61,7 @@
 
 using namespace std;
 using namespace Control;
+using namespace GSM;
 
 
 
@@ -945,7 +946,7 @@ void Control::HOController(TransactionEntry *transaction)
 //	unsigned L3TI = transaction->L3TI();
 //	assert(L3TI>7);
 
-
+	bool handoverCommandNeeded = true;
 
 	LOG(INFO) << "wait for SIP OKAY";
 	SIP::SIPState state = transaction->SIPState();
@@ -953,6 +954,44 @@ void Control::HOController(TransactionEntry *transaction)
 
 		LOG(DEBUG) << "wait for SIP session start";
 		state = transaction->HOWaitForOK();
+		LOG(ERR) << "handover SIP status is" << state;
+		
+		char cell[200], chan[200];
+		unsigned ref;
+		if(handoverCommandNeeded && transaction->handoverTarget(cell, chan ,&ref)){
+			LOG(ERR) << "handover to " << cell << "; " << chan << "; " << ref;
+			
+			unsigned bcc, ncc, c0 ;
+			unsigned tn, tsc, arfcn;
+			
+			char *p;
+			p = strstr(cell,"BCC="); 
+			sscanf(p+strlen("BCC="),"%u",&bcc);
+
+			p = strstr(cell,"NCC="); 
+			sscanf(p+strlen("NCC="),"%u",&ncc);
+			
+			p = strstr(cell,"ARFCN="); 
+			sscanf(p+strlen("ARFCN="),"%u",&c0);
+
+			p = strstr(chan,"TN="); 
+			sscanf(p+strlen("TN="),"%u",&tn);
+
+			p = strstr(chan,"TSC="); 
+			sscanf(p+strlen("TSC="),"%u",&tsc);
+			
+			p = strstr(chan,"ARFCN="); 
+			sscanf(p+strlen("ARFCN="),"%u",&arfcn);
+
+			LOG(ERR) << "sending handover Command for transaction" << transaction->callingTransaction();
+			
+			transaction->callingTransaction()->HOSendHandoverCommand(
+				L3CellDescription(bcc,ncc,c0),
+				L3ChannelDescription(TCHF_0,tn,tsc,arfcn),
+				ref);
+			
+			handoverCommandNeeded = false;
+		}
 		LOG(DEBUG) << "SIP state "<< state;
 
 
@@ -981,9 +1020,24 @@ void Control::HOController(TransactionEntry *transaction)
 		}
 	} 
 	
-	transaction->HOSendACK();
-	transaction->HOSendREINVITE();
+	
+	if(state == SIP::HO_Active){
+		LOG(ERR) << "got SIP 200 OK for handover, decoding sdp";
+		
+		char ip[20], port_str[10];
+		short port;
+		unsigned codec;
+		
+		transaction->reinviteTarget(ip, port_str, &codec);
+		port = atoi(port_str);
+		transaction->HOSendACK();
+		transaction->callingTransaction()->HOSendREINVITE(ip, port, codec);
+		// TODO:
+		// strictly, old transaction must release radio resources (and a thread),
+		// and further processing must be moved to a dedicated "proxy" thread;
+		// meanwhile currecnt transaction should be terminated
 
+	}
 
 
 	// The radio link should have been cleared with the call.

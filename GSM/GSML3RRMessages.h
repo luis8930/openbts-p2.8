@@ -736,23 +736,24 @@ public:
 		:L3RRMessageNRO(),
 			mChannelDescription(wChannelDescription),
 			mCellDescription(wCellDescription),
-			mHandoverReference(wHandoverReference)
+			mHandoverReference(wHandoverReference),
+			mPowerCommand(2)
 		{}
 
 	/** for evaluating: to the given channel inside the same sell */
-	L3HandoverCommand(const L3ChannelDescription& wChannelDescription,
+/*	L3HandoverCommand(const L3ChannelDescription& wChannelDescription,
 			const L3HandoverReference& wHandoverReference )
 		:L3RRMessageNRO(),
 			mChannelDescription(wChannelDescription),
 			mHandoverReference(wHandoverReference)
 		{}
+*/
 
+	int MTI() const { return (int) HandoverCommand; }
 
-        int MTI() const { return (int) HandoverCommand; }
-  
-        size_t l2BodyLength() const;
-        void writeBody( L3Frame &dest, size_t &wp ) const;
-        void text(std::ostream&) const;
+	size_t l2BodyLength() const;
+	void writeBody( L3Frame &dest, size_t &wp ) const;
+	void text(std::ostream&) const;
 };
 
 /** GSM 04.08 9.1.16 */
