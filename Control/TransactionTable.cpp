@@ -101,7 +101,8 @@ TransactionEntry::TransactionEntry(
 	const L3CallingPartyBCDNumber& wCalling,
 	GSM::CallState wState,
 	const char *wMessage)
-	:mID(gTransactionTable.newID()),
+	:mProxyTransaction(false),
+	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
 	mL3TI(gTMSITable.nextL3TI(wSubscriber.digits())),
 	mCalling(wCalling),
@@ -125,7 +126,8 @@ TransactionEntry::TransactionEntry(
 	const L3CMServiceType& wService,
 	unsigned wL3TI,
 	const L3CalledPartyBCDNumber& wCalled)
-	:mID(gTransactionTable.newID()),
+	:mProxyTransaction(false),
+	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
 	mL3TI(wL3TI),
 	mCalled(wCalled),
@@ -149,7 +151,8 @@ TransactionEntry::TransactionEntry(
 	GSM::LogicalChannel* wChannel,
 	const L3CMServiceType& wService,
 	unsigned wL3TI)
-	:mID(gTransactionTable.newID()),
+	:mProxyTransaction(false),
+	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
 	mL3TI(wL3TI),
 	mSIP(proxy,mSubscriber.digits()),
@@ -171,7 +174,8 @@ TransactionEntry::TransactionEntry(
 	GSM::LogicalChannel* wChannel,
 	const L3CalledPartyBCDNumber& wCalled,
 	const char* wMessage)
-	:mID(gTransactionTable.newID()),
+	:mProxyTransaction(false),
+	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),
 	mService(GSM::L3CMServiceType::ShortMessage),
 	mL3TI(7),mCalled(wCalled),
@@ -193,7 +197,8 @@ TransactionEntry::TransactionEntry(
 	const char* proxy,
 	const L3MobileIdentity& wSubscriber,
 	GSM::LogicalChannel* wChannel)
-	:mID(gTransactionTable.newID()),
+	:mProxyTransaction(false),
+	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),
 	mService(GSM::L3CMServiceType::ShortMessage),
 	mL3TI(7),
@@ -621,6 +626,7 @@ SIP::SIPState TransactionEntry::HOSendINVITE(string whichBTS)
 SIP::SIPState TransactionEntry::HOSendREINVITE(char *ip, short port, unsigned codec)
 {
 	ScopedLock lock(mLock);
+	mProxyTransaction = true;
 	SIP::SIPState state = mSIP.HOSendREINVITE(ip, port, codec);
 	echoSIPState(state);
 	return state;
@@ -907,7 +913,8 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	unsigned wL3TI,
 	const GSM::L3CMServiceType& wService)
 
-	:mID(gTransactionTable.newID()),
+	:mProxyTransaction(false),
+	mID(gTransactionTable.newID()),
 	mL3TI(wL3TI),
 	mSubscriber(wSubscriber),
 	mSIP(proxy,mSubscriber.digits()),
@@ -922,7 +929,8 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	const GSM::L3MobileIdentity& wSubscriber,
 	string whichBTS,
 	unsigned wL3TI, short wDRTPPort, unsigned wCodec)
-	:mOldTransaction(wOldTransaction),
+	:mProxyTransaction(false),
+	mOldTransaction(wOldTransaction),
 	mSubscriber(wSubscriber),
 	mL3TI(wOldTransaction->L3TI()),
 	mSIP(whichBTS.c_str(),mSubscriber.digits() ,
