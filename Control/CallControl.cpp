@@ -600,14 +600,22 @@ bool pollInCall(TransactionEntry *transaction, GSM::TCHFACCHLogicalChannel *TCH)
 {
 	// See if the radio link disappeared.
 	if (TCH->radioFailure()) {
-		LOG(NOTICE) << "radio link failure, dropped call";
-		forceSIPClearing(transaction);
-		return true;
+		if(transaction->proxyTransaction()){
+			LOG(ERR) << "transaction is acting as SIP proxy due to handover";
+			return true;
+		}
+		else {
+			LOG(NOTICE) << "radio link failure, dropped call";
+			forceSIPClearing(transaction);
+			return true;
+		}
 	}
 
 	// Process pending SIP and GSM signalling.
 	// If this returns true, it means the call is fully cleared.
-	if (updateSignalling(transaction,TCH)) return true;
+	if (updateSignalling(transaction,TCH)) {
+		return true;
+	}
 
 	// Did an outside process request a termination?
 	if (transaction->terminationRequested()) {
@@ -663,7 +671,11 @@ void callManagementLoop(TransactionEntry *transaction, GSM::TCHFACCHLogicalChann
 	LOG(INFO) << " call connected " << *transaction;
 	// poll everything until the call is finished
 	while (!pollInCall(transaction,TCH)) { }
-	gTransactionTable.remove(transaction);
+	if(transaction->proxyTransaction()){
+		LOG(ERR) << "keeping transaction w/o a thread: handover occurred";
+		//TODO: proxy activities must be carried within a dedicated thread;
+	}
+	else gTransactionTable.remove(transaction);
 }
 
 
@@ -1032,6 +1044,7 @@ void Control::HOController(TransactionEntry *transaction)
 		port = atoi(port_str);
 		transaction->HOSendACK();
 		transaction->callingTransaction()->HOSendREINVITE(ip, port, codec);
+		LOG(ERR) << "handover debugging, transaction is idle " << transaction->callingTransaction();
 		// TODO:
 		// strictly, old transaction must release radio resources (and a thread),
 		// and further processing must be moved to a dedicated "proxy" thread;

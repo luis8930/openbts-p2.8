@@ -95,7 +95,8 @@ class TransactionEntry {
 
 	bool mTerminationRequested;
 	
-//	HandoverEntry *mHandoverEntry;
+	bool mProxyTransaction;
+	
 	TransactionEntry *mOldTransaction;	// a link to original call, used for outgoing handovers
 
 	public:
@@ -277,6 +278,7 @@ class TransactionEntry {
 	// Send Handover Command to move the current call
 	void HOSendHandoverCommand(GSM::L3CellDescription wCell, GSM::L3ChannelDescription wChan, unsigned wHandoverReference);
 	
+	bool proxyTransaction() { return mProxyTransaction; }
 	
 	bool handoverTarget(char *cell, char *chan , unsigned *reference) 
 		{ return mSIP.handoverTarget(cell, chan , reference);}

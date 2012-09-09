@@ -737,7 +737,7 @@ public:
 			mChannelDescription(wChannelDescription),
 			mCellDescription(wCellDescription),
 			mHandoverReference(wHandoverReference),
-			mPowerCommand(2)
+			mPowerCommand(15)
 		{}
 
 	/** for evaluating: to the given channel inside the same sell */
