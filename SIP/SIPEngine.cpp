@@ -956,7 +956,7 @@ SIPState SIPEngine::HOCSendOK( short wRTPPort, unsigned wCodec )
 		mSIPIP.c_str(), mSIPPort, mRTPPort, mCodec);
 	gSIPInterface.write(okay);	// send directly to BTS
 	osip_message_free(okay);
-	mState=Connecting;
+	mState = Active;
 	return mState;
 }
 
@@ -1224,6 +1224,8 @@ void SIPEngine::InitRTP(const osip_message_t * msg )
 	mDRTPPort = atoi(d_port);
 	rtp_session_set_local_addr(mSession, "0.0.0.0", mRTPPort );
 	rtp_session_set_remote_addr(mSession, d_ip_addr, atoi(d_port));
+	
+	LOG(ERR) << "handover debug, RTP local " << mRTPPort << ", remote " << d_ip_addr << ":" << d_port;
 
 	// Check for event support.
 	int code = rtp_session_telephone_events_supported(mSession);
