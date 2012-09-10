@@ -4,6 +4,7 @@
 * Copyright 2008, 2010 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Process, Inc.
 * Copyright 2011, 2012 Range Networks, Inc.
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This software is distributed under multiple licenses;
 * see the COPYING file in the main directory for licensing
@@ -928,13 +929,13 @@ TransactionEntry::TransactionEntry(const char* proxy,
 TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction, 
 	const GSM::L3MobileIdentity& wSubscriber,
 	string whichBTS,
-	unsigned wL3TI, short wDRTPPort, unsigned wCodec)
+	unsigned wL3TI, string wDRTPIp, short wDRTPPort, unsigned wCodec)
 	:mProxyTransaction(false),
 	mOldTransaction(wOldTransaction),
 	mSubscriber(wSubscriber),
 	mL3TI(wOldTransaction->L3TI()),
 	mSIP(whichBTS.c_str(),mSubscriber.digits() ,
-		wL3TI, wDRTPPort, wCodec),
+		wL3TI, wDRTPIp, wDRTPPort, wCodec),
 	mID(gTransactionTable.newID()),
 	mService(GSM::L3CMServiceType::OutgoingHandover),
 //	mCalled(wCalled),

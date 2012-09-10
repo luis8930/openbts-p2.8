@@ -1,12 +1,11 @@
 /**@file Declarations for TransactionTable and related classes. */
 /*
-* Copyright 2008, 2009, 2010 Free Software Foundation, Inc.
+<<<<<<< HEAD
 * Copyright 2010 Kestrel Signal Processing, Inc.
 * Copyright 2011, 2012 Range Networks, Inc.
-*
-* This software is distributed under multiple licenses;
-* see the COPYING file in the main directory for licensing
-* information for this specific distribuion.
+* Copyright 2008-2011 Free Software Foundation, Inc.
+d * Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
+>>>>>>> handover target implemented, tests needed
 *
 * This use of this software may be subject to additional restrictions.
 * See the LEGAL file in the main directory for details.
@@ -154,7 +153,7 @@ class TransactionEntry {
 	TransactionEntry(TransactionEntry *wOldTransaction, 
 		const GSM::L3MobileIdentity& wSubscriber,
 		string whichBTS,
-		unsigned wL3TI, short wDRTPPort, unsigned wCodec);
+		unsigned wL3TI, string wDRTPIp, short wDRTPPort, unsigned wCodec);
 	
 	/** Delete the database entry upon destruction. */
 	~TransactionEntry();
@@ -192,7 +191,8 @@ class TransactionEntry {
 //	HandoverEntry * handoverEntry() { return mHandoverEntry; }
 	
 	// needed to create a temporary transaction for outgoing handover
-	short destRTPPort() const { return mSIP.DestRTPPort(); }
+	short destRTPPort() const { return mSIP.destRTPPort(); }
+	char* destRTPIp() { return mSIP.destRTPIp(); }
 	short codec() const { return mSIP.codec(); }
 	TransactionEntry* callingTransaction() { return mOldTransaction; }
 	//@}

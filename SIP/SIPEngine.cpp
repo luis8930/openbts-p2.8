@@ -2,6 +2,7 @@
 /*
 * Copyright 2008, 2009, 2010, 2011 Free Software Foundation, Inc.
 * Copyright 2011, 2012 Range Networks, Inc.
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -946,7 +947,7 @@ SIPState SIPEngine::MODWaitForResponse(vector<unsigned> *validResponses, Mutex *
 	return mState;
 };
 
-SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short wDestRTP, unsigned wCodec)
+SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, string wDRTPIp, short wDestRTP, unsigned wCodec)
 	:mCSeq(random()%1000),
 	mMyToFromHeader(NULL), mRemoteToFromHeader(NULL),
 	mCallIDHeader(NULL),
@@ -960,6 +961,7 @@ SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short 
 {
 	LOG(ERR) << "creating SIP engine for outgoing handover transaction";
 	assert(proxy);
+	strcpy(mDRTPIp, wDRTPIp.c_str());
 	mSIPUsername = string("IMSI") + IMSI;
 	LOG(ERR) << "creating SIP engine for outgoing handover transaction, username " << mSIPUsername;
 	char tmp[200];
@@ -1013,7 +1015,7 @@ SIPState SIPEngine::HOSendINVITE(string whichBTS)
 
 	osip_message_t * invite = sip_handover(
 		mSIPUsername.c_str(), whichBTS.c_str(),
-		mDRTPPort, mSIPUsername.c_str(), 
+		mDRTPIp, mDRTPPort, mSIPUsername.c_str(), 
 		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
 		mViaBranch.c_str(), mCallID.c_str(), mCSeq, mCodec); 
 
@@ -1504,16 +1506,16 @@ void SIPEngine::InitRTP(const osip_message_t * msg )
 	// FIXME -- Make this work for multiple vocoder types.
 	rtp_session_set_payload_type(mSession, 3);
 
-	char d_ip_addr[20];
+	//char d_ip_addr[20];
 	char d_port[10];
 	LOG(ERR) << "calling get_rtp_params";
-	get_rtp_params(msg, d_port, d_ip_addr);
-	LOG(DEBUG) << "IP="<<d_ip_addr<<" "<<d_port<<" "<<mRTPPort;
+	get_rtp_params(msg, d_port, mDRTPIp/*d_ip_addr*/);
+	LOG(DEBUG) << "IP="<<mDRTPIp/*d_ip_addr*/<<" "<<d_port<<" "<<mRTPPort;
 	mDRTPPort = atoi(d_port);
 	rtp_session_set_local_addr(mSession, "0.0.0.0", mRTPPort );
-	rtp_session_set_remote_addr(mSession, d_ip_addr, atoi(d_port));
+	rtp_session_set_remote_addr(mSession, mDRTPIp/*d_ip_addr*/, atoi(d_port));
 	
-	LOG(ERR) << "handover debug, RTP local " << mRTPPort << ", remote " << d_ip_addr << ":" << d_port;
+	LOG(ERR) << "handover debug, RTP local " << mRTPPort << ", remote " << mDRTPIp/*d_ip_addr*/ << ":" << d_port;
 
 	// Check for event support.
 	int code = rtp_session_telephone_events_supported(mSession);

@@ -1,5 +1,6 @@
 /*
 * Copyright 2008 Free Software Foundation, Inc.
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This software is distributed under multiple licenses;
 * see the COPYING file in the main directory for licensing

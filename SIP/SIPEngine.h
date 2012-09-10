@@ -2,6 +2,7 @@
 * Copyright 2008 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
 * Copyright 2011 Range Networks, Inc.
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -127,6 +128,7 @@ private:
 	//@{
 	short mRTPPort;
 	short mDRTPPort;
+	char mDRTPIp[20];		// destination ip (rtp)
 	unsigned mCodec;
 	RtpSession * mSession;		///< RTP media session
 	unsigned int mTxTime;		///< RTP transmission timestamp in 8 kHz samples
@@ -164,7 +166,8 @@ public:
 
 	/** Return the RTP Port being used. */
 	short RTPPort() const { return mRTPPort; }
-	short DestRTPPort() const { return mDRTPPort; }
+	short destRTPPort() const { return mDRTPPort; }
+	char* destRTPIp() { return mDRTPIp; }
 	unsigned codec() const { return mCodec; }
 
 	/** Return if the call has successfully finished */
@@ -181,7 +184,7 @@ public:
 	void user( const char * wCallID, const char * IMSI , const char *origID, const char *origHost);
 
 	/** Set generate call ID for outgoing handover */
-	SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, short wDestRTP, unsigned wCodec);
+	SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, string wDRTPIp, short wDestRTP, unsigned wCodec);
 	
 	/** fetch parameters for Handover Command */
 	bool handoverTarget(char *cell, char *chan , unsigned *reference);
