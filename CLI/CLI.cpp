@@ -1,6 +1,8 @@
 /*
 * Copyright 2009, 2010 Free Software Foundation, Inc.
 * Copyright 2010 Kestrel Signal Processing, Inc.
+* Copyright 2012 Jet Wong <icptster@gmail.com>
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -750,16 +752,19 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	os << "\"old\" handover transaction: " << *transaction;
 	unsigned codec = transaction->codec();
 	short destRTPPort = transaction->destRTPPort();
+	char* destRTPIp = transaction->destRTPIp();
 	unsigned l3ti = transaction->L3TI();
 
 	// get somewhere SIP ip:port of the desired cell
 	string whichBTS = "192.168.10.3:5062";
 	
+	os << "asterisk endpoint is " << destRTPIp << ":" << destRTPPort;
+	
 	// create a temporary transaction and start the procedure
 	Control::TransactionEntry *newTransaction= 
 		new Control::TransactionEntry(transaction, mobileID, 
 			whichBTS,
-			l3ti, destRTPPort, codec);
+			l3ti, destRTPIp, destRTPPort, codec);
 	os << "\"temporary\" transaction created, handover Invite sent";
 	LOG(ERR) << "\"temporary\" transaction created, handover Invite sent";
 	
