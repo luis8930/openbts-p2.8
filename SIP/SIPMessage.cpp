@@ -1,5 +1,7 @@
 /*
 * Copyright 2008 Free Software Foundation, Inc.
+* Copyright 2012 Jet Wong <icptster@gmail.com>
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This software is distributed under the terms of the GNU Affero Public License.
 * See the COPYING file in the main directory for details.
@@ -467,14 +469,14 @@ osip_message_t * SIP::sip_invite( const char * dialed_number, short rtp_port, co
 }
 
 osip_message_t * SIP::sip_handover(const char * dialed_number, const char * destBTS,
-	short rtp_port, const char * sip_username, short wlocal_port,
+	const char * rtp_ip, short rtp_port, const char * sip_username, short wlocal_port,
 	const char * local_ip, const char * proxy_ip,
 	const char * via_branch, const char * call_id, int cseq, unsigned codec) {
 
 	char local_port[10];
 	sprintf(local_port, "%i", wlocal_port);
 	
-	LOG(ERR) << "handover dest is " << destBTS;
+	LOG(ERR) << "handover dest is " << destBTS << ", asterisk sdp is " << *rtp_ip << ":" << rtp_port;
 	
 	osip_message_t * request;
 	openbts_message_init(&request);
@@ -565,7 +567,7 @@ osip_message_t * SIP::sip_handover(const char * dialed_number, const char * dest
 	sdp_message_m_media_add(sdp, strdup("audio"), 
 		strdup(temp_buf), NULL, strdup("RTP/AVP"));
 	sdp_message_c_connection_add
-		(sdp, 0, strdup("IN"), strdup("IP4"), strdup(local_ip),NULL, NULL);
+		(sdp, 0, strdup("IN"), strdup("IP4"), strdup(rtp_ip),NULL, NULL);
 
 	// FIXME -- This should also be inside the switch?
 	sdp_message_m_payload_add(sdp,0,strdup("3"));
@@ -639,7 +641,8 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 	sdp_message_init(&sdp);
 	sdp_message_v_version_set(sdp, strdup("0"));
 	sdp_message_o_origin_set(sdp, strdup(sip_username), strdup("0"),
-	strdup("0"), strdup("IN"), strdup("IP4"), strdup(local_ip));
+//	strdup("0"), strdup("IN"), strdup("IP4"), strdup(local_ip));
+	strdup("0"), strdup("IN"), strdup("IP4"), strdup(rtp_ip));
 
 	sdp_message_s_name_set(sdp, strdup("Talk Time"));
 	sdp_message_t_time_descr_add(sdp, strdup("0"), strdup("0") );
@@ -661,6 +664,8 @@ osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const 
 			break;
 		default: assert(0);
 	};
+	sdp_message_a_attribute_add(sdp,0,strdup("ptime"),strdup("20"));
+	sdp_message_a_attribute_add(sdp,0,strdup("sendrecv"),0);
 
 	/*
 	 * We construct a sdp_message_t, turn it into a string, and then treat it
