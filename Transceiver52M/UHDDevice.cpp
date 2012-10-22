@@ -360,7 +360,7 @@ double uhd_device::set_rates(double rate)
 	actual_rt = usrp_dev->get_tx_rate();
 
 	if (actual_rt != rate) {
-		LOG(ALERT) << "Actual sample rate differs from desired rate";
+		LOG(ALERT) << "Actual sample rate differs from desired rate: expected=" << rate << ", got=" << actual_rt;
 		return -1.0;
 	}
 	if (usrp_dev->get_rx_rate() != actual_rt) {
