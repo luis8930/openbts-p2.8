@@ -820,7 +820,7 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	unsigned l3ti = transaction->L3TI();
 
 	// get somewhere SIP ip:port of the desired cell
-	string whichBTS = "192.168.10.3:5062";
+	string whichBTS = gConfig.getStr("GSM.Handover.Debug.NeighbourIp");// "192.168.10.5:5062";
 	
 	os << "asterisk endpoint is " << destRTPIp << ":" << destRTPPort;
 	
