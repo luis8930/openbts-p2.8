@@ -927,23 +927,34 @@ SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 
 SIPState SIPEngine::HOCSendProceeding(const char *body)
 {
-	LOG(ERR) << "ack'ing handover, user " << mSIPUsername 
-		<< " state " << mState
-		<< "target " << body;
 	if (mINVITE==NULL) {
 		mState=Fail;
 		LOG(ERR) << "handover, mINVITE is NULL";
 	}
 	if (mState==Fail) return mState;
-	LOG(ERR) << "handover, preparing proceeeding";
 	
-	osip_message_t * proceeding = sip_proceeding(mINVITE, mSIPUsername.c_str(), mProxyIP.c_str(),body);
-	// get ip:port from VIA, as we have to respond directly
-	LOG(ERR) << "handover, proceeeding is ready";
-	
+	osip_message_t * proceeding = sip_proceeding(mINVITE, mSIPUsername.c_str(), mProxyIP.c_str(), mSIPPort, body);
+	// get ip:port from VIA, as we have to respond directly	
 	gSIPInterface.write(proceeding);
 	osip_message_free(proceeding);
 	mState=Proceeding;
+	return mState;
+}
+
+SIPState SIPEngine::HOCSendTemporarilyUnavailable()
+{
+	if (mINVITE==NULL) {
+		mState=Fail;
+		LOG(ERR) << "handover, mINVITE is NULL";
+	}
+	if (mState==Fail) return mState;
+	LOG(ERR) << "handover, sending SIP 480 unavailable";
+	
+	osip_message_t * unavail = sip_temporarily_unavailable(mINVITE, mProxyIP.c_str(), mSIPUsername.c_str(), mSIPPort);;
+	// get ip:port from VIA, as we have to respond directly
+	gSIPInterface.write(unavail);
+	osip_message_free(unavail);
+	mState=Canceled;
 	return mState;
 }
 

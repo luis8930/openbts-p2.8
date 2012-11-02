@@ -292,7 +292,8 @@ public:
 	//@}
 	
 	SIPState HOCSendOK(short rtpPort, unsigned codec);
-
+	
+	SIPState HOCSendTemporarilyUnavailable();
 
 
 	/**@name Messages for MOD procedure. */

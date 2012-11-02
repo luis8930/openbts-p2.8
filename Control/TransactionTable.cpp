@@ -677,7 +677,7 @@ SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference,
 		unsigned wBCC, unsigned wNCC, unsigned wC0,
 		const char *channelDescription){
 
-	LOG(WARNING) << "handover: SIP, acknowledging (with SIP:Progress or somehow else)" << 
+	LOG(WARNING) << "handover: SIP 183, proceeding" << 
 		"\n\t Handover:" << wHandoverReference <<
 		"\n\t Cell:" << 
 		" BCC= " << wBCC << 
@@ -710,8 +710,11 @@ SIP::SIPState TransactionEntry::HOCSendOK(short rtpPort, unsigned codec){
 
 
 SIP::SIPState TransactionEntry::HOCTimeout(){
-	
-	LOG(ERR) << "handover: imagine we are sending smth like SIP 4xx FAILED";
+	LOG(ERR) << "handover: sending 480 Temporarily Unavailable";
+	ScopedLock lock(mLock);
+	SIP::SIPState state = mSIP.HOCSendTemporarilyUnavailable();
+	echoSIPState(state);
+	return state;
 }
 
 
