@@ -1415,7 +1415,7 @@ osip_message_t * SIP::sip_info(const char * measurements, const char *dialed_num
 	return request;	
 }
 
-osip_message_t * SIP::sip_proceeding( osip_message_t * invite, const char * sip_username, const char *local_ip, const char * body) {
+osip_message_t * SIP::sip_proceeding( osip_message_t * invite, const char * sip_username, const char *local_ip, short  port, const char * body) {
 
 	osip_message_t * proceeding;
 	openbts_message_init(&proceeding);
@@ -1452,12 +1452,16 @@ osip_message_t * SIP::sip_proceeding( osip_message_t * invite, const char * sip_
 	osip_free(cseq_str);
 
 	// CONTACT URI
+	char local_port[10];
+	sprintf(local_port, "%i", port);
+	
 	osip_contact_t * con;
 	osip_to_init(&con);
 	osip_uri_init(&con->url);
 	osip_uri_set_host(con->url, strdup(local_ip));
 	osip_uri_set_username(con->url, strdup(sip_username));
-
+	osip_uri_set_port(con->url, strdup(local_port));
+	
 	// add contact
 	osip_list_add(&proceeding->contacts, con, -1);
 	

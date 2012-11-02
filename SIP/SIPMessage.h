@@ -73,7 +73,7 @@ osip_message_t * sip_handover( const char * dialed_number, const char * destBTS,
 
 osip_message_t * sip_reinvite_mo( osip_message_t * invite, int cseq, const char * sip_username, const char *local_ip, const char * rtp_ip, short rtp_port, unsigned codec);
 
-osip_message_t * sip_proceeding( osip_message_t * invite, const char * sip_username, const char *local_ip, const char * body);
+osip_message_t * sip_proceeding( osip_message_t * invite, const char * sip_username, const char *local_ip, short  port, const char * body);
 
 
 
