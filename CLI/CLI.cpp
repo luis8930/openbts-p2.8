@@ -799,41 +799,21 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 {
 	if (argc!=2) return BAD_NUM_ARGS;
 
+	os << endl << "Active transactions before handover attempt" << endl;	
 	size_t count = gTransactionTable.dump(os);
 	os << endl << count << " transactions in table" << endl;
 
 	GSM::L3MobileIdentity mobileID(argv[1]);
+	string whichBTS = gConfig.getStr("GSM.Handover.Debug.NeighbourIp");
 	
-	// find transaction which serves a call leg
-	Control::TransactionEntry* transaction= gTransactionTable.find(mobileID,GSM::Active);
-	if(transaction==NULL) {
-		os << "handover(CLI): transaction with IMSI not found " << argv[1];
-		return BAD_NUM_ARGS;
-	} 
+	gBTS.handover().performHandover(mobileID, whichBTS);
 	
-	// fetch key params for handover
-	LOG(ERR) << "\"old\" handover transaction: " << *transaction;
-	os << "\"old\" handover transaction: " << *transaction;
-	unsigned codec = transaction->codec();
-	short destRTPPort = transaction->destRTPPort();
-	char* destRTPIp = transaction->destRTPIp();
-	unsigned l3ti = transaction->L3TI();
-
-	// get somewhere SIP ip:port of the desired cell
-	string whichBTS = gConfig.getStr("GSM.Handover.Debug.NeighbourIp");// "192.168.10.5:5062";
+	sleep(3);
+	gBTS.handover().showOutgoingHandovers();
 	
-	os << "asterisk endpoint is " << destRTPIp << ":" << destRTPPort;
-	
-	// create a temporary transaction and start the procedure
-	Control::TransactionEntry *newTransaction= 
-		new Control::TransactionEntry(transaction, mobileID, 
-			whichBTS,
-			l3ti, destRTPIp, destRTPPort, codec);
-	os << "\"temporary\" transaction created, handover Invite sent";
-	LOG(ERR) << "\"temporary\" transaction created, handover Invite sent";
-	
-	//newTransaction->HOSendINVITE(whichBTS);
-	Control::HOController(newTransaction);
+	os << endl << "Active transactions after handover attempt" << endl;	
+	count = gTransactionTable.dump(os);
+	os << endl << count << " transactions in table" << endl;
 	
 	return SUCCESS;
 }

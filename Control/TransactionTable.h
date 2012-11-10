@@ -30,6 +30,7 @@ d * Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 #include <Timeval.h>
 #include <Sockets.h>
 
+//#include <osip2/osip.h>
 
 #include <GSML3CommonElements.h>
 #include <GSML3MMElements.h>
@@ -226,10 +227,15 @@ class TransactionEntry {
 
 	// few functions below are needed to serve outgoing handover inside a 
 	// "temporary" transaction
-	SIP::SIPState HOSendINVITE(string whichBTS);
-	SIP::SIPState HOWaitForOK();
-	SIP::SIPState HOSendACK();
-	SIP::SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
+		SIP::SIPState HOSendINVITE(string whichBTS);
+		SIP::SIPState HOWaitForOK();
+		SIP::SIPState HOSendACK();
+		SIP::SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
+	
+	// get a raw message for CallID
+	osip_message_t * HOGetSIPMessage();
+
+	void HOTurnToProxy();
 	
 	SIP::SIPState MTCSendTrying();
 	SIP::SIPState MTCSendRinging();

@@ -59,7 +59,11 @@
 #include <SIPEngine.h>
 
 #include <Logger.h>
+
 #include <Reporting.h>
+
+#include <osipparser2/osip_message.h>
+
 #undef WARNING
 
 using namespace std;
@@ -666,7 +670,7 @@ bool pollInCall(TransactionEntry *transaction, GSM::TCHFACCHLogicalChannel *TCH)
 	// See if the radio link disappeared.
 	if (TCH->radioFailure()) {
 		if(transaction->proxyTransaction()){
-			LOG(ERR) << "transaction is acting as SIP proxy due to handover";
+			LOG(ERR) << "since this moment a transaction is acting as SIP proxy due to handover";
 			return true;
 		}
 		else {
@@ -737,11 +741,7 @@ void callManagementLoop(TransactionEntry *transaction, GSM::TCHFACCHLogicalChann
 	gReports.incr("OpenBTS.GSM.CC.CallMinutes");
 	// poll everything until the call is finished
 	while (!pollInCall(transaction,TCH)) { }
-	if(transaction->proxyTransaction()){
-		LOG(ERR) << "keeping transaction w/o a thread: handover occurred";
-		//TODO: proxy activities must be carried within a dedicated thread;
-	}
-	else gTransactionTable.remove(transaction);
+	if(! transaction->proxyTransaction() )gTransactionTable.remove(transaction);
 }
 
 
@@ -1335,5 +1335,76 @@ void Control::initiateMTTransaction(TransactionEntry *transaction, GSM::ChannelT
 
 
 
+bool Control::HOAttemptSM(osip_message_t *event, TransactionEntry *transaction){
+    LOG(ERR) << "outgoing handover attempt, state is " << transaction->SIPState() <<
+		"event is " << event;
+    switch(transaction->SIPState()){
+	case SIP::HO_Inviting:
+		// Invite sent, expecting SIP 183 with target cell parameters
+		char *cell;
+		char *chan;
+		unsigned *reference;
+		if(event->status_code == 183){
+			if(transaction->handoverTarget(cell, chan , reference)){
+
+				// now we need to issue Handover Command
+
+				LOG(ERR) << "handover to " << cell << "; " << chan << "; " << *reference;
+				unsigned bcc, ncc, c0 ;
+				unsigned tn, tsc, arfcn;
+				char *p;
+				p = strstr(cell,"BCC="); 
+				sscanf(p+strlen("BCC="),"%u",&bcc);
+				p = strstr(cell,"NCC="); 
+				sscanf(p+strlen("NCC="),"%u",&ncc);
+				p = strstr(cell,"ARFCN="); 
+				sscanf(p+strlen("ARFCN="),"%u",&c0);
+
+				p = strstr(chan,"TN="); 
+				sscanf(p+strlen("TN="),"%u",&tn);
+				p = strstr(chan,"TSC="); 
+				sscanf(p+strlen("TSC="),"%u",&tsc);				
+				p = strstr(chan,"ARFCN="); 
+				sscanf(p+strlen("ARFCN="),"%u",&arfcn);
+
+				LOG(ERR) << "sending handover Command for transaction" << transaction->callingTransaction();
+				
+				transaction->callingTransaction()->HOSendHandoverCommand(
+					L3CellDescription(bcc,ncc,c0),
+					L3ChannelDescription(TCHF_0,tn,tsc,arfcn),
+					*reference);
+				
+				LOG(ERR) << "changing state to " << transaction->SIPState();
+				return false;
+			}}
+		// remove transaction and forget (ea remove references from the original transaction)
+		return false;
+	case SIP::HO_Waiting:
+		// waiting for SIP 200, to send re-invite and turn the original transaction into proxy
+		if(event->status_code == 200){
+			LOG(ERR) << "got SIP 200 OK for handover, decoding sdp";
+		
+			char ip[20], port_str[10];
+			short port;
+			unsigned codec;
+		
+			transaction->reinviteTarget(ip, port_str, &codec);
+			port = atoi(port_str);
+			transaction->HOSendACK();
+			transaction->callingTransaction()->HOSendREINVITE(ip, port, codec);
+			
+			return true;
+		}
+    }
+    return false;
+}
+
+bool Control::HOProxyDownlinkSM(osip_message_t *event, TransactionEntry *transaction){
+	return false;
+}
+
+bool Control::HOProxyUplinkSM(osip_message_t *event, TransactionEntry *transaction){
+	return false;
+}
 
 // vim: ts=4 sw=4

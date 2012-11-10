@@ -627,7 +627,7 @@ SIP::SIPState TransactionEntry::HOSendINVITE(string whichBTS)
 SIP::SIPState TransactionEntry::HOSendREINVITE(char *ip, short port, unsigned codec)
 {
 	ScopedLock lock(mLock);
-	mProxyTransaction = true;
+	if(!mProxyTransaction)	mProxyTransaction = true;
 	SIP::SIPState state = mSIP.HOSendREINVITE(ip, port, codec);
 	echoSIPState(state);
 	return state;
@@ -907,7 +907,7 @@ bool TransactionEntry::terminationRequested()
 }
 
 
-// functions for Handover-Originated transactions
+// Handover-Originated transaction, target site
 TransactionEntry::TransactionEntry(const char* proxy,
 	const GSM::L3MobileIdentity& wSubscriber,
 	GSM::LogicalChannel* wChannel,
@@ -925,7 +925,7 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	LOG(INFO) << "starting transaction for handover, " << mChannel;
 }
 
-
+// Handover attempt at the initial site
 TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction, 
 	const GSM::L3MobileIdentity& wSubscriber,
 	string whichBTS,
@@ -948,23 +948,8 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	LOG(ERR) << "\"temporary\" transaction for outgoing handover, created";
 	
 	HOSendINVITE(whichBTS);
-/*	mL3TI = wOldTransaction->L3TI();
-	LOG(WARNING) << "need to copy (IMSI, ip, dest rtp, codec)" << wOldTransaction->sipEngine().DestRTPPort();
-	mSIP = new SIP::SIPEngine(
-		gConfig.getStr("SIP.Proxy.Speech").c_str(),
-		wOldTransaction->subscriber(),
-		wOldTransaction->L3TI(),
-		wOldTransaction->sipEngine().DestRTPPort(),
-		wOldTransaction->sipEngine().codec());	
-*/
 }
-/*
-void TransactionEntry::addHandoverEntry(HandoverEntry * wHandoverEntry){
-	mHandoverEntry = wHandoverEntry;
-	
-	LOG(WARNING) << "handover: linking transaction " << this->mChannel << "with handover " << mHandoverEntry->handoverReference();
-}
-*/
+
 
 SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference, 
 		unsigned wBCC, unsigned wNCC, unsigned wC0,
@@ -1000,9 +985,13 @@ SIP::SIPState TransactionEntry::HOCSendOK(short rtpPort, unsigned codec){
 	return state;
 }
 
+osip_message_t * TransactionEntry::HOGetSIPMessage(){
+	return mSIP.get_message();
+}
 
 
 SIP::SIPState TransactionEntry::HOCTimeout(){
+	// FIXME not sure if need to do it: no one cares..
 	LOG(ERR) << "handover: sending 480 Temporarily Unavailable";
 	ScopedLock lock(mLock);
 	SIP::SIPState state = mSIP.HOCSendTemporarilyUnavailable();
