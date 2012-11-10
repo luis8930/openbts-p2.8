@@ -1849,7 +1849,7 @@ void SIPEngine::sendINFO(const char * wInfo)
 };
 
 osip_message_t* SIPEngine::get_message(){
-	return gSIPInterface.read(mCallID, 0);
+	return gSIPInterface.read(mCallID, 1);
 }
 
 

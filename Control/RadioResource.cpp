@@ -722,7 +722,7 @@ void Handover::handoverHandler(){
 
 		bool delaySipRegister = false;
 		for (HandoverEntryList::iterator lp = mHandovers.begin(); lp != mHandovers.end(); lp++) {
-			LOG(WARNING) << "processing handover " << lp->handoverReference();
+//			LOG(WARNING) << "processing handover " << lp->handoverReference();
 			delaySipRegister |= lp->T3105Tick();
 		}
 		
@@ -900,6 +900,7 @@ bool Handover::performHandover(const GSM::L3MobileIdentity& wSubscriber,
 	LOG(ERR) << "\"temporary\" transaction created, handover Invite sent";
 	
 	mOutgoingHandovers.push_back(OutgoingHandover(newTransaction));
+	mHandoverSignal.signal();
 	return true;
 }
 
@@ -922,8 +923,12 @@ bool OutgoingHandover::isFinished(){
 	osip_message_t *msg;
 	bool term = false;
 	
+	LOG(ERR) << "processing outgoing handover";
+	
 	if(! mProxy){
+		LOG(ERR) << "outgoing handover, SETUP PHASE";
 		if(mT3103.expired()){
+			LOG(ERR) << "outgoing handover timeout";
 			gSIPInterface.removeCall(mTransactionHO->SIPCallID());
 			gTransactionTable.remove(mTransactionHO);
 			return true;
@@ -931,6 +936,7 @@ bool OutgoingHandover::isFinished(){
 		
 		msg = mTransactionHO->HOGetSIPMessage();
 		if(msg != NULL){
+			LOG(ERR) << "SIP msg detected for outgoing handover";
 			if(HOAttemptSM(msg, mTransactionHO)){
 				// turn an old transaction into proxy, ea
 				// 1) release radio resources (old transaction)
@@ -948,6 +954,8 @@ bool OutgoingHandover::isFinished(){
 		return false;
 	}
 	
+	LOG(ERR) << "outgoing handover, PROXY PHASE";
+		
 	// Proxy activites;
 	msg = mTransactionHO->HOGetSIPMessage();
 	if(msg != NULL) term = HOProxyUplinkSM(msg, mTransactionMSC);
