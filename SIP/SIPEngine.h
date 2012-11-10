@@ -66,6 +66,9 @@ enum SIPState  {
 	Fail,
 	MessageSubmit,
 			//HO state
+	HO_Inviting,
+	HO_Waiting,
+	
 	HO_Initiated,
 	HO_WaitAccess,
 	HO_Active
@@ -153,6 +156,8 @@ public:
 	/** Destroy held message copies. */
 	~SIPEngine();
 
+	osip_message_t* get_message();
+	
 	const std::string& callID() const { return mCallID; } 
 
 	const std::string& proxyIP() const { return mProxyIP; }

@@ -65,6 +65,16 @@ void MTCController(TransactionEntry*, GSM::TCHFACCHLogicalChannel*);
 // by Jet, activities at the "old" site
 void HOController(TransactionEntry *transaction);
 
+/** State machine for (outgoing) handover attempt;
+ *  returns true if still needed */
+bool HOAttemptSM(osip_message_t *event, TransactionEntry *transaction);
+
+/** State machines for handover proxy;
+ *  returns true if still needed 
+ *  Downlink - from switch to handover chain 
+ *  Uplink - from chain towards switch */
+bool HOProxyDownlinkSM(osip_message_t *event, TransactionEntry *transaction);
+bool HOProxyUplinkSM(osip_message_t *event, TransactionEntry *transaction);
 
 /**@name Test Call */
 //@{

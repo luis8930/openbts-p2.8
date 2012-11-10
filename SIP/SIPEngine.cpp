@@ -1453,6 +1453,9 @@ void SIPEngine::sendINFO(const char * wInfo)
 	osip_message_free(info);
 };
 
+osip_message_t* SIPEngine::get_message(){
+	return gSIPInterface.read(mCallID, 0);
+}
 
 
 // vim: ts=4 sw=4

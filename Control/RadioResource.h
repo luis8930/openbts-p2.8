@@ -41,6 +41,7 @@ class L3AssignmentComplete;
 class TCHFACCHLogicalChannel;
 class L3PhysicalInformation;
 class L3HandoverComplete;
+class L3MobileIdentity;
 class Z100Timer;
 };
 
@@ -65,7 +66,10 @@ void HandoverCompleteHandler(const GSM::L3HandoverComplete*, GSM::LogicalChannel
 
 class TransactionEntry;
 
-/** handover entry, placed when handover is requested from outside and removed when handoved complete message got at DCCH*/
+
+/** Used to perform call setup activities at the "target" side.
+ * Handover entry is created when handover is requested from outside, by means of SIP,
+ *  and is removed when handover complete message is got at DCCH*/
 class HandoverEntry{
 	private:
 	mutable Mutex mLock;
@@ -139,8 +143,30 @@ class HandoverEntry{
 };
 
 
+
+
+class OutgoingHandover{
+	public:
+		OutgoingHandover(TransactionEntry* wTransaction);
+		
+		bool isFinished();
+		
+		void status();
+	private:
+		GSM::Z100Timer mT3103;
+		
+		bool mProxy;
+		
+		// to interface the switch
+		TransactionEntry* mTransactionMSC;
+		// to interface the chain
+		TransactionEntry* mTransactionHO;
+	
+};
+
+
 typedef std::list<HandoverEntry> HandoverEntryList;
-//class HandoverEntryMap : public std::map<unsigned,HandoverEntry*> {};
+typedef std::list<OutgoingHandover> OutgoingHandoverList;
 
 
 class Handover{
@@ -152,20 +178,28 @@ class Handover{
 		
 		void start();
 		
-		// 29/08/2012
+		/** request to accommodate a handover */
 		bool addHandover(const char* CallID, const char* IMSI, unsigned l3ti, const char* callerHost, void* msg);
-		
+		/** got RACH with Handover Access */
 		void handoverAccess(unsigned wTN, int initialTA);
-		
+		/** got Handover Complete at DCCH */
 		void handoverComplete(unsigned wTN);
 		
 		void showHandovers();
-			
+		
+
+		
+		/** try to push a handset to the particular site*/
+		bool performHandover(const GSM::L3MobileIdentity& wSubscriber,
+					string whichBTS);
+		void showOutgoingHandovers();
+		
+		
 	private:
 		unsigned allocateHandoverReference();
 
-		//HandoverEntryMap mHandovers;		///< active handovers.
 		HandoverEntryList mHandovers;		///< active handovers.
+		OutgoingHandoverList mOutgoingHandovers;
 		mutable Mutex mLock;			///< Lock for thread-safe access.
 		Signal mHandoverSignal;			///< signal to wake the loop
 		Thread mHandoverThread;			///< Thread for the loop.
