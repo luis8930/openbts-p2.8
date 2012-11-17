@@ -108,9 +108,8 @@ const char* SIP::SIPStateString(SIPState s)
 		case Cleared: return "Cleared";
 		case MessageSubmit: return "SMS-Submit";
 		//HO state
-		case HO_Initiated: return "HO_Initiated";
-		case HO_WaitAccess: return "HO_WaitAccess";
-		case HO_Active: return "HO_Active";
+		case HO_Invited: return "HO_Invited";
+		case HO_Command: return "HO_Command";
 		default: return NULL;
 	}
 }
@@ -959,11 +958,9 @@ SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, string
 	mDTMF('\0'),mDTMFDuration(0),
 	mDRTPPort(wDestRTP), mCodec(wCodec)
 {
-	LOG(ERR) << "creating SIP engine for outgoing handover transaction";
 	assert(proxy);
 	strcpy(mDRTPIp, wDRTPIp.c_str());
 	mSIPUsername = string("IMSI") + IMSI;
-	LOG(ERR) << "creating SIP engine for outgoing handover transaction, username " << mSIPUsername;
 	char tmp[200];
 	sprintf(tmp, "handover-%u-%s-%lX", wL3TI, mSIPUsername.c_str(), time(0));
 	LOG(ERR) << "creating SIP engine for outgoing handover transaction, callID " << tmp;
@@ -1034,7 +1031,7 @@ SIPState SIPEngine::HOSendINVITE(string whichBTS)
 	gSIPInterface.write(&mHOtoBTSAddr,invite);
 	saveINVITE(invite,true);
 	osip_message_free(invite);
-	mState = HO_Initiated;
+	mState = HO_Invited;
 	return mState;
 };
 
@@ -1053,7 +1050,7 @@ bool SIPEngine::reinviteTarget(char *ip, char *port, unsigned *codec){
 	LOG(ERR) << "last response is" << mLastResponse;
 	return get_rtp_params(mLastResponse, port, ip);
 }
-
+/*
 SIPState  SIPEngine::HOWaitForOK()
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
@@ -1102,6 +1099,7 @@ SIPState  SIPEngine::HOWaitForOK()
 	LOG(DEBUG) << " new state: " << mState;
 	return mState;
 }
+*/
 
 //this isn't working right now -kurtis
 SIPState SIPEngine::HOSendACK()
@@ -1113,8 +1111,7 @@ SIPState SIPEngine::HOSendACK()
 	make_branch(tmp);
 	mViaBranch = tmp;
 
-	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
-
+	
 	osip_message_t* ack = sip_ack( mRemoteDomain.c_str(),
 		mRemoteUsername.c_str(), 
 		mSIPUsername.c_str(),
@@ -1126,6 +1123,8 @@ SIPState SIPEngine::HOSendACK()
 	gSIPInterface.write(&mHOtoBTSAddr,ack);
 	osip_message_free(ack);	
 
+	mState = HO_Proxy;
+	
 	return mState;
 }
 
@@ -1849,8 +1848,36 @@ void SIPEngine::sendINFO(const char * wInfo)
 };
 
 osip_message_t* SIPEngine::get_message(){
-	return gSIPInterface.read(mCallID, 1);
+	osip_message_t * msg;
+	try {
+		msg = gSIPInterface.read(mCallID,10);
+	}
+	catch (SIPTimeout& e) {
+		return NULL;
+	}
+	catch (SIPError& e) {
+		return NULL;
+	}	
+	return msg;
 }
+
+
+osip_message_t* SIPEngine::HOGetResp(){
+	osip_message_t * msg;
+	try {
+		msg = gSIPInterface.read(mCallID,10);
+		if(msg->status_code == 183) mState = HO_Command;
+		//else if(msg->status_code == 200) mState = HO_Proxy;
+	}
+	catch (SIPTimeout& e) {
+		return NULL;
+	}
+	catch (SIPError& e) {
+		return NULL;
+	}	
+	return msg;
+}
+
 
 
 // vim: ts=4 sw=4

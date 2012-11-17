@@ -808,12 +808,19 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	
 	gBTS.handover().performHandover(mobileID, whichBTS);
 	
-	sleep(3);
-	gBTS.handover().showOutgoingHandovers();
+//	sleep(3);
+//	gBTS.handover().showOutgoingHandovers();
 	
 	os << endl << "Active transactions after handover attempt" << endl;	
 	count = gTransactionTable.dump(os);
 	os << endl << count << " transactions in table" << endl;
+	
+	return SUCCESS;
+}
+
+int status(int argc, char** argv, ostream& os, istream& is)
+{
+	gTransactionTable.dump(os);
 	
 	return SUCCESS;
 }
@@ -850,6 +857,8 @@ void Parser::addCommands()
 	addCommand("crashme", crashme, "force crash of OpenBTS for testing purposes");
 	addCommand("stats", stats,"[patt] -- print all, or selected, performance statistics");
 	addCommand("handover", handover,"[IMSI]-- try to perform handover to another timeslot inside the same BTS");
+	addCommand("handover", handover,"[IMSI]-- try to perform handover to another timeslot inside the same BTS");
+	addCommand("?", status, "just show transactions");
 }
 
 

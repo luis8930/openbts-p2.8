@@ -1098,24 +1098,26 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 
 	//OBJLOG(ERR) << "burst at tn=" << TN();
 	if(gTRX.ARFCN()->handover( TN() )){
-		OBJLOG(ERR) << "Trying to decode as Access Burst, same TN()";
+		OBJLOG(DEBUG) << "Trying to decode as Access Burst, same TN()";
 		
 		unsigned HR;
 		if(decodeRACHBurst(inBurst, mParityHA, mUHA, mDHA, HR)){
-			OBJLOG(ERR) <<"handover Access Detected at "<< TN() <<", HandoverReference=" << HR <<"\n";
+			OBJLOG(DEBUG) <<"handover Access Detected at "<< TN() <<", HandoverReference=" << HR <<"\n";
 			if(HR == gTRX.ARFCN()->getHandoverReference( TN() )){
-				OBJLOG(ERR) <<"handover Reference ok.. " << HR << "\n";
+				OBJLOG(DEBUG) <<"handover Reference ok.. " << HR << "\n";
 				
 				int initialTA = (int)(inBurst.timingError() + 0.5F);
 				if (initialTA<0) initialTA=0;
 				if (initialTA>62) initialTA=62;
+				
+				cout << "valid handover access detected, reference=" << HR << endl;
 				
 				gBTS.handover().handoverAccess(TN(),initialTA);
 				//Control::HandoverEntry *he = gBTS.handover().find_handover(TN());
 				//if(he) he->HandoverAccessDetected(initialTA);
 				//else OBJLOG(ERR) << "unable to find handover entry @" << TN();
 			}
-			else OBJLOG(ERR) <<"Wrong handover Reference " << HR << "\n";
+			else OBJLOG(ALERT) <<"Wrong handover Reference " << HR << "\n";
 		return false;}
 	}
 //	else OBJLOG(ERR) << "Normal burst!!!";

@@ -41,6 +41,7 @@
 
 #include <Reporting.h>
 #include <Logger.h>
+#include <osipparser2/osip_message.h>
 #undef WARNING
 
 
@@ -596,7 +597,7 @@ SIP::SIPState TransactionEntry::MOCSendACK()
 	echoSIPState(state);
 	return state;
 }
-
+/*
 SIP::SIPState TransactionEntry::HOWaitForOK()
 {
 	ScopedLock lock(mLock);
@@ -604,7 +605,7 @@ SIP::SIPState TransactionEntry::HOWaitForOK()
 	echoSIPState(state);
 	return state;
 }
-
+*/
 SIP::SIPState TransactionEntry::HOSendACK()
 {
 	ScopedLock lock(mLock);
@@ -955,7 +956,7 @@ SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference,
 		unsigned wBCC, unsigned wNCC, unsigned wC0,
 		const char *channelDescription){
 
-	LOG(WARNING) << "handover: SIP 183, proceeding" << 
+	LOG(ERR) << "handover: SIP 183, proceeding" << 
 		"\n\t Handover:" << wHandoverReference <<
 		"\n\t Cell:" << 
 		" BCC= " << wBCC << 
@@ -986,7 +987,31 @@ SIP::SIPState TransactionEntry::HOCSendOK(short rtpPort, unsigned codec){
 }
 
 osip_message_t * TransactionEntry::HOGetSIPMessage(){
-	return mSIP.get_message();
+	osip_message_t *msg;
+	msg = mSIP.get_message();
+	if(msg != NULL) {
+		LOG(ERR) << "SIP for outgo handover";
+		if(msg->status_code) {
+			LOG(ERR) << "saving resp for outgo handover";
+			mSIP.saveResponse(msg);
+		}
+	}	
+	return msg;
+}
+
+
+int TransactionEntry::HOGetSIPResponse(){
+	osip_message_t *msg; 
+	msg = mSIP.HOGetResp();
+	if(msg != NULL) {
+		LOG(ERR) << "SIP for outgo handover " << msg->status_code;
+		if(msg->status_code) {
+			mSIP.saveResponse(msg);
+			LOG(ERR) << "handover, SIP msg saved " << msg->status_code;
+			return msg->status_code;
+		}
+	}	
+	return 0;
 }
 
 
@@ -1432,5 +1457,88 @@ bool TransactionTable::duplicateMessage(const GSM::L3MobileIdentity& mobileID, c
 	return false;
 
 }
+
+bool TransactionEntry::HOSetupFinished(){
+// outgoing handover setup logic
+// returns true if fails
+// else transforms both transactions to proxy
+
+	int resp_code = HOGetSIPResponse();
+	
+	if(resp_code == 0) return false;
+	
+	LOG(ERR) << "outgoing handover attempt, state is " << SIPState() <<
+		", SIP resp is "<< resp_code;
+
+	switch(resp_code){
+		case 183:
+			char cell[100];
+			char chan[100];
+			unsigned reference;
+			
+			if(handoverTarget(cell, chan , &reference)){
+
+				// now we need to issue Handover Command
+				LOG(ERR) << "handover to " << cell << "; " << chan << "; " << reference;
+				unsigned bcc, ncc, c0 ;
+				unsigned tn, tsc, arfcn;
+				char *p;
+				p = strstr(cell,"BCC="); 
+				sscanf(p+strlen("BCC="),"%u",&bcc);
+				p = strstr(cell,"NCC="); 
+				sscanf(p+strlen("NCC="),"%u",&ncc);
+				p = strstr(cell,"ARFCN="); 
+				sscanf(p+strlen("ARFCN="),"%u",&c0);
+
+				p = strstr(chan,"TN="); 
+				sscanf(p+strlen("TN="),"%u",&tn);
+				p = strstr(chan,"TSC="); 
+				sscanf(p+strlen("TSC="),"%u",&tsc);				
+				p = strstr(chan,"ARFCN="); 
+				sscanf(p+strlen("ARFCN="),"%u",&arfcn);
+
+				LOG(ERR) << "sending handover Command for transaction" << callingTransaction();
+				
+				callingTransaction()->HOSendHandoverCommand(
+					L3CellDescription(bcc,ncc,c0),
+					L3ChannelDescription(TCHF_0,tn,tsc,arfcn),
+					reference);
+				
+				LOG(ERR) << "changing state to " << SIPState();
+				return false;
+			}
+			else LOG(ERR) << "handover target is unknown";
+			return false;
+		case 480: return true;
+		case 200:		
+			// we were waiting for SIP 200
+			// to send re-invite and turn the original transaction into proxy
+			LOG(ERR) << "got SIP 200 OK for handover, decoding sdp";
+		
+			char ip[20], port_str[10];
+			short port;
+			unsigned codec;
+		
+			reinviteTarget(ip, port_str, &codec);
+			port = atoi(port_str);
+			HOSendACK();
+			callingTransaction()->HOSendREINVITE(ip, port, codec);
+
+			// turn an old transaction into proxy, ea
+			// 1) release radio resources (old transaction)
+			// 2) mark transaction as handover proxy
+			// this is performed in the following way:
+			// inside HOSendREINVITE()
+			// mProxyTransaction is set to TRUE
+			// when a handset disappears at uplink,
+			// this prevents from killing SIP
+				
+			return false;
+		}
+	LOG(ERR) << "outgoing handover SM, no idea how reached this point";
+	return false;
+}
+
+
 
 // vim: ts=4 sw=4

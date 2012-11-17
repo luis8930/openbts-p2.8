@@ -229,7 +229,6 @@ void SIPInterface::write(osip_message_t *msg)
 	char * str;
 	size_t msgSize;
 	
-	LOG(ERR) << "handover ack write()";
 	// Get Record Route.
 	osip_via_t * via;
 	osip_message_get_via(msg, 0, &via);
@@ -237,13 +236,13 @@ void SIPInterface::write(osip_message_t *msg)
 //	LOG(ERR) << "handover " << via.c_str();
 	
 	if (! resolveAddress(&dest, via->host, atoi(via->port))) {
-		LOG(ERR) << "handover cannot resolve IP address to reply ";
+		LOG(ALERT) << "handover cannot resolve IP address to reply ";
 		return;
 	}
 	
 	osip_message_to_str(msg, &str, &msgSize);
 	if (!str) {
-		LOG(ERR) << "osip_message_to_str produced a NULL pointer.";
+		LOG(ALERT) << "osip_message_to_str produced a NULL pointer.";
 		return;
 	}
 	mSocketLock.lock();

@@ -47,6 +47,7 @@
 
 #include <Reporting.h>
 #include <Logger.h>
+#include <osipparser2/osip_message.h>
 #undef WARNING
 
 
@@ -730,6 +731,7 @@ void Handover::handoverHandler(){
 			if(lp->isFinished()) {
 				LOG(WARNING) << "removing outgoing handover";
 				mOutgoingHandovers.erase(lp);
+				break;
 			}
 		}
 		
@@ -900,19 +902,29 @@ bool Handover::performHandover(const GSM::L3MobileIdentity& wSubscriber,
 	LOG(ERR) << "\"temporary\" transaction created, handover Invite sent";
 	
 	mOutgoingHandovers.push_back(OutgoingHandover(newTransaction));
+	gTransactionTable.add(newTransaction);
 	mHandoverSignal.signal();
 	return true;
 }
 
 void Handover::showOutgoingHandovers(){
+	ScopedLock lock(mLock);
 	LOG(WARNING) << "active outgoing handovers:";
 	for (OutgoingHandoverList::iterator lp = mOutgoingHandovers.begin(); lp != mOutgoingHandovers.end(); lp++) {
 		lp->status();
 	}
 }
 
+void Handover::dump(ostream& os) const{
+    	ScopedLock lock(mLock);
+	
+	for (OutgoingHandoverList::const_iterator lp = mOutgoingHandovers.begin(); lp != mOutgoingHandovers.end(); lp++) {
+		os << lp-> status() << endl;
+	}
+}
+
 OutgoingHandover::OutgoingHandover(TransactionEntry* wTransaction)
-	:mProxy(false),mTransactionHO(wTransaction){
+	:mTransactionHO(wTransaction){
 	
 	mT3103 = Z100Timer(gConfig.getNum("GSM.Handover.T3103"));
 	mT3103.set();
@@ -923,10 +935,10 @@ bool OutgoingHandover::isFinished(){
 	osip_message_t *msg;
 	bool term = false;
 	
-	LOG(ERR) << "processing outgoing handover";
+	//LOG(ERR) << "processing outgoing handover";
 	
-	if(! mProxy){
-		LOG(ERR) << "outgoing handover, SETUP PHASE";
+	if(mTransactionHO->SIPState() != HO_Proxy){
+		//LOG(ERR) << "outgoing handover, SETUP PHASE";
 		if(mT3103.expired()){
 			LOG(ERR) << "outgoing handover timeout";
 			gSIPInterface.removeCall(mTransactionHO->SIPCallID());
@@ -934,35 +946,34 @@ bool OutgoingHandover::isFinished(){
 			return true;
 		}
 		
-		msg = mTransactionHO->HOGetSIPMessage();
-		if(msg != NULL){
-			LOG(ERR) << "SIP msg detected for outgoing handover";
-			if(HOAttemptSM(msg, mTransactionHO)){
-				// turn an old transaction into proxy, ea
-				// 1) release radio resources (old transaction)
-				// 2) mark transaction as handover proxy
-				// this is performed in the following way:
-				// HOAttemptSM() calls HOSendREINVITE();
-				// mProxyTransaction is set to TRUE
-				// when a handset disappears at uplink,
-				// this prevents from killing SIP
-				mTransactionMSC = mTransactionHO->callingTransaction();
-				LOG(ERR) << "outgoing handover succeed. Make it a proxy now";
-				mProxy = true;
-			}
+		if(mTransactionHO->HOSetupFinished()){
+			LOG(ERR) << "outgoing handover failed";
+			gSIPInterface.removeCall(mTransactionHO->SIPCallID());
+			gTransactionTable.remove(mTransactionHO);
+			return true;
+		}
+		else if(mTransactionHO->SIPState() == HO_Proxy){
+			LOG(ERR) << "outgoing handover succeed. It is proxy now";
+			mTransactionMSC = mTransactionHO->callingTransaction();
 		}
 		return false;
 	}
+
 	
-	LOG(ERR) << "outgoing handover, PROXY PHASE";
+//	LOG(ERR) << "outgoing handover, PROXY PHASE";
 		
 	// Proxy activites;
 	msg = mTransactionHO->HOGetSIPMessage();
-	if(msg != NULL) term = HOProxyUplinkSM(msg, mTransactionMSC);
+	if(msg != NULL) {
+		LOG(ERR) << "msg from the tail, after handover, method=" << msg->sip_method;
+		term = HOProxyUplinkSM(msg, mTransactionMSC);
+	}
 
 	msg = mTransactionMSC->HOGetSIPMessage();
-	if(msg != NULL) term |= HOProxyDownlinkSM(msg, mTransactionHO);
-	
+	if(msg != NULL) {
+		LOG(ERR) << "msg from the MSC, after handover, method=" << msg->sip_method;
+		term |= HOProxyDownlinkSM(msg, mTransactionHO);
+	}
 	if(term) {
 		gSIPInterface.removeCall(mTransactionHO->SIPCallID());
 		gTransactionTable.remove(mTransactionHO);
@@ -972,8 +983,11 @@ bool OutgoingHandover::isFinished(){
 }
 
 
+const char * OutgoingHandover::status() const{
 
-void OutgoingHandover::status(){
-    
+	LOG(ERR) << " outgoing handover transaction " << mTransactionHO << ", status=" << mTransactionHO->SIPState();
+
+	if(mTransactionHO->SIPState() == HO_Proxy) return "handover performed";
+	else return "trying to perform handover";
 }
 // vim: ts=4 sw=4

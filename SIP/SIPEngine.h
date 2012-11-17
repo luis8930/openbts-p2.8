@@ -66,12 +66,13 @@ enum SIPState  {
 	Fail,
 	MessageSubmit,
 			//HO state
-	HO_Inviting,
-	HO_Waiting,
+	HO_Invited,
+	HO_Command,
+	HO_Proxy
 	
-	HO_Initiated,
-	HO_WaitAccess,
-	HO_Active
+//	HO_Initiated,
+//	HO_WaitAccess,
+//	HO_Active
 };
 
 
@@ -160,6 +161,7 @@ public:
 	~SIPEngine();
 
 	osip_message_t* get_message();
+	osip_message_t* HOGetResp();
 	
 	const std::string& callID() const { return mCallID; } 
 
@@ -343,7 +345,7 @@ public:
 	SIPState MTDSendCANCELOK();
 	//@}
 	SIPState HOSendINVITE(string whichBTS);
-	SIPState HOWaitForOK();
+//	SIPState HOWaitForOK();
 	SIPState HOSendACK();
 	SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
 	

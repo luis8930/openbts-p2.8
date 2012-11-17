@@ -151,11 +151,11 @@ class OutgoingHandover{
 		
 		bool isFinished();
 		
-		void status();
+		const char *status() const;
 	private:
 		GSM::Z100Timer mT3103;
 		
-		bool mProxy;
+		//bool mProxy;
 		
 		// to interface the switch
 		TransactionEntry* mTransactionMSC;
@@ -194,7 +194,7 @@ class Handover{
 					string whichBTS);
 		void showOutgoingHandovers();
 		
-		
+		void dump(std::ostream&) const;
 	private:
 		unsigned allocateHandoverReference();
 
