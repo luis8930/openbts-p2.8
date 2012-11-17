@@ -122,7 +122,7 @@ void startTransceiver()
 	LOG_ASSERT(gTransceiverPid>=0);
 	if (gTransceiverPid==0) {
 		// Pid==0 means this is the process that starts the transceiver.
-		execlp(transceiverPath,transceiverPath,TRXnumARFCN,NULL);
+		execlp(transceiverPath,transceiverPath,gConfig.getStr("TRX.UHD.IP").c_str(),NULL);
 		LOG(EMERG) << "cannot find " << transceiverPath;
 		_exit(1);
 	} else {
