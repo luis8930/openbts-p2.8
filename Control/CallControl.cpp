@@ -950,7 +950,7 @@ void Control::MOCController(TransactionEntry *transaction, GSM::TCHFACCHLogicalC
 	// So just return.
 }
 
-
+/*
 void Control::HOController(TransactionEntry *transaction)
 {
 //	LOG(DEBUG) << "transaction: " << *transaction;
@@ -1055,7 +1055,7 @@ void Control::HOController(TransactionEntry *transaction)
 	// The radio link should have been cleared with the call.
 	// So just return.
 }
-
+*/
 
 void Control::MTCStarter(TransactionEntry *transaction, GSM::LogicalChannel *LCH)
 {
@@ -1253,12 +1253,12 @@ void Control::initiateMTTransaction(TransactionEntry *transaction, GSM::ChannelT
 
 
 
-
+/*
 bool Control::HOAttemptSM(osip_message_t *event, TransactionEntry *transaction){
     LOG(ERR) << "outgoing handover attempt, state is " << transaction->SIPState() <<
-		"event is " << event;
+		", event is " << event << " SIP code is "<< event->status_code;
     switch(transaction->SIPState()){
-	case SIP::HO_Inviting:
+	case SIP::HO_Invited:
 		// Invite sent, expecting SIP 183 with target cell parameters
 		char *cell;
 		char *chan;
@@ -1295,10 +1295,12 @@ bool Control::HOAttemptSM(osip_message_t *event, TransactionEntry *transaction){
 				
 				LOG(ERR) << "changing state to " << transaction->SIPState();
 				return false;
-			}}
+			}
+			else LOG(ERR) << "handover target is unknown";
+		}
 		// remove transaction and forget (ea remove references from the original transaction)
 		return false;
-	case SIP::HO_Waiting:
+	case SIP::HO_Commanded:
 		// waiting for SIP 200, to send re-invite and turn the original transaction into proxy
 		if(event->status_code == 200){
 			LOG(ERR) << "got SIP 200 OK for handover, decoding sdp";
@@ -1317,7 +1319,7 @@ bool Control::HOAttemptSM(osip_message_t *event, TransactionEntry *transaction){
     }
     return false;
 }
-
+*/
 bool Control::HOProxyDownlinkSM(osip_message_t *event, TransactionEntry *transaction){
 	return false;
 }

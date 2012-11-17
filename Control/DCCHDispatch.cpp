@@ -97,6 +97,9 @@ void DCCHDispatchRR(const L3RRMessage* req, LogicalChannel *DCCH)
 										dynamic_cast<TCHFACCHLogicalChannel*>(DCCH));
 			break;
 		case L3RRMessage::HandoverComplete:	// 04.08 sent on DCCH 9.1.16
+			
+			cout << "valid handover complete detected, DCCH=" << DCCH << endl;
+			
 			HandoverCompleteHandler(dynamic_cast<const L3HandoverComplete*>(req),DCCH);
 		default:
 			LOG(NOTICE) << "unhandled RR message " << MTI << " on " << *DCCH;

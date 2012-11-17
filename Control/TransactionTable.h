@@ -226,12 +226,16 @@ class TransactionEntry {
 	// few functions below are needed to serve outgoing handover inside a 
 	// "temporary" transaction
 		SIP::SIPState HOSendINVITE(string whichBTS);
-		SIP::SIPState HOWaitForOK();
+//		SIP::SIPState HOWaitForOK();
 		SIP::SIPState HOSendACK();
 		SIP::SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
 	
 	// get a raw message for CallID
 	osip_message_t * HOGetSIPMessage();
+	int HOGetSIPResponse();
+
+	// outgoing handover setup logic to be used inside handover thread
+	bool HOSetupFinished();
 
 	void HOTurnToProxy();
 	
