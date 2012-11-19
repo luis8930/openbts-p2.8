@@ -908,12 +908,16 @@ SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 	mViaBranch = tmp;
 	mCSeq++;
 	
-	LOG(DEBUG) << "mRemoteUsername=" << mRemoteUsername;
-	LOG(DEBUG) << "mSIPUsername=" << mSIPUsername;
-
-	osip_message_t * invite = sip_reinvite_mo( mINVITE, mCSeq,
+/*	osip_message_t * invite = sip_reinvite_mo( mINVITE, mCSeq,
 		mSIPUsername.c_str(), mSIPIP.c_str(),
 		ip, port, codec);
+*/
+	osip_message_t * invite = sip_reinvite(mRemoteDomain.c_str(), mRemoteUsername.c_str(), 
+		mSIPUsername.c_str(), mSIPPort, mSIPIP.c_str(),
+		mMyToFromHeader, mRemoteToFromHeader,
+		mViaBranch.c_str(), mCallIDHeader, mCSeq,
+		ip, port, codec);
+	
 	LOG(ERR) << "handover re-invite is " << invite->message;
 
 	gSIPInterface.write(&mProxyAddr,invite);
