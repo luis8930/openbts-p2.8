@@ -71,7 +71,12 @@ osip_message_t * sip_ringing( osip_message_t * invite, const char * sip_username
 
 osip_message_t * sip_handover( const char * dialed_number, const char * destBTS, const char * rtp_ip, short rtp_port, const char * sip_username, short wlocal_port, const char * local_ip, const char * proxy_ip, const char * via_branch, const char * call_id, int cseq, unsigned codec) ;
 
-osip_message_t * sip_reinvite_mo( osip_message_t * invite, int cseq, const char * sip_username, const char *local_ip, const char * rtp_ip, short rtp_port, unsigned codec);
+//osip_message_t * sip_reinvite_mo( osip_message_t * invite, int cseq, const char * sip_username, const char *local_ip, const char * rtp_ip, short rtp_port, unsigned codec);
+osip_message_t * sip_reinvite(const char * request_uri, const char * dialed_number,
+	const char * sip_username, short wlocal_port, const char * local_ip, 
+	const osip_from_t* from_header, const osip_to_t* to_header, 
+	const char * via_branch, const osip_call_id_t* call_id_header, int cseq,
+	const char * rtp_ip, short rtp_port, unsigned codec);
 
 osip_message_t * sip_proceeding( osip_message_t * invite, const char * sip_username, const char *local_ip, short  port, const char * body);
 
