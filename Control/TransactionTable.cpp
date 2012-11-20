@@ -1008,7 +1008,9 @@ int TransactionEntry::HOGetSIPResponse(){
 		if(msg->status_code) {
 			mSIP.saveResponse(msg);
 			LOG(ERR) << "handover, SIP msg saved " << msg->status_code;
-			return msg->status_code;
+			int code = msg->status_code;
+			osip_message_free(msg);
+			return code;
 		}
 	}	
 	return 0;
@@ -1539,6 +1541,14 @@ bool TransactionEntry::HOSetupFinished(){
 	return false;
 }
 
-
+/* just now - dummy functions */
+void TransactionEntry::HOProxy_resp_forward_forget(osip_message_t *event){
+	osip_message_free(event);
+	return;
+}
+void TransactionEntry::HOProxy_req_forward_forget(osip_message_t *event){
+	osip_message_free(event);
+	return;
+}
 
 // vim: ts=4 sw=4

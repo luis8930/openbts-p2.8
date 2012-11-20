@@ -1401,12 +1401,33 @@ bool Control::HOAttemptSM(osip_message_t *event, TransactionEntry *transaction){
     return false;
 }
 */
+
+/* The reason to keep different functions for proxy SM is
+ *  to implement (later on) logic of flipping loops */
 bool Control::HOProxyDownlinkSM(osip_message_t *event, TransactionEntry *transaction){
+	assert(event);
+	if(MSG_IS_RESPONSE(event)) {
+		LOG(ERR) << "handover proxy: forwarding resp " << event->status_code;
+		transaction->HOProxy_resp_forward_forget(event);
+		return false;
+	}
+	
+	if(MSG_IS_BYE(event)){
+		LOG(ERR) << "handover proxy: forwarding BYE ";
+		
+		transaction->MODSendBYE();
+		osip_message_free(event);
+		return true;
+	}
+	
+	LOG(ERR) << "handover proxy: forwarding " << event->sip_method;
+	transaction->HOProxy_req_forward_forget(event);
+					
 	return false;
 }
 
 bool Control::HOProxyUplinkSM(osip_message_t *event, TransactionEntry *transaction){
-	return false;
+	return HOProxyDownlinkSM(event, transaction);
 }
 
 // vim: ts=4 sw=4
