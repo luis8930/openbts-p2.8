@@ -958,15 +958,28 @@ bool OutgoingHandover::isFinished(){
 		LOG(ERR) << "msg from the tail, after handover, method=" << msg->sip_method;
 		term = HOProxyUplinkSM(msg, mTransactionMSC);
 	}
-
+	if(term) {
+		mTransactionHO->MTDSendBYEOK();
+		
+		gSIPInterface.removeCall(mTransactionHO->SIPCallID());
+		gTransactionTable.remove(mTransactionHO);
+		
+		gSIPInterface.removeCall(mTransactionMSC->SIPCallID());
+		gTransactionTable.remove(mTransactionMSC);
+		return true;
+	}
+	
 	msg = mTransactionMSC->HOGetSIPMessage();
 	if(msg != NULL) {
 		LOG(ERR) << "msg from the MSC, after handover, method=" << msg->sip_method;
-		term |= HOProxyDownlinkSM(msg, mTransactionHO);
+		term = HOProxyDownlinkSM(msg, mTransactionHO);
 	}
 	if(term) {
 		gSIPInterface.removeCall(mTransactionHO->SIPCallID());
 		gTransactionTable.remove(mTransactionHO);
+
+		gSIPInterface.removeCall(mTransactionMSC->SIPCallID());
+		gTransactionTable.remove(mTransactionMSC);
 		return true;
 	}
 	return false;

@@ -298,6 +298,9 @@ class TransactionEntry {
 	bool reinviteTarget(char *ip, char *port, unsigned *codec)
 		{ return mSIP.reinviteTarget(ip, port , codec);}
 	
+	void HOProxy_resp_forward_forget(osip_message_t *event);
+	void HOProxy_req_forward_forget(osip_message_t *event);
+	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)
 		{ ScopedLock lock(mLock); mSIP.saveINVITE(invite,local); }

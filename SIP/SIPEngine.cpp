@@ -1467,6 +1467,9 @@ osip_message_t* SIPEngine::get_message(){
 	catch (SIPError& e) {
 		return NULL;
 	}	
+	
+	if(strcasestr(msg->sip_method,"bye")) saveBYE(msg,false);
+	
 	return msg;
 }
 
