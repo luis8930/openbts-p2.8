@@ -798,11 +798,11 @@ int stats(int argc, char** argv, ostream& os)
 int handover(int argc, char** argv, ostream& os, istream& is)
 {
 	if (argc!=2) return BAD_NUM_ARGS;
-
+/*
 	os << endl << "Active transactions before handover attempt" << endl;	
 	size_t count = gTransactionTable.dump(os);
 	os << endl << count << " transactions in table" << endl;
-
+*/
 	GSM::L3MobileIdentity mobileID(argv[1]);
 	string whichBTS = gConfig.getStr("GSM.Handover.Debug.NeighbourIp");
 	
@@ -810,11 +810,11 @@ int handover(int argc, char** argv, ostream& os, istream& is)
 	
 //	sleep(3);
 //	gBTS.handover().showOutgoingHandovers();
-	
+/*	
 	os << endl << "Active transactions after handover attempt" << endl;	
 	count = gTransactionTable.dump(os);
 	os << endl << count << " transactions in table" << endl;
-	
+*/	
 	return SUCCESS;
 }
 
@@ -856,8 +856,7 @@ void Parser::addCommands()
 	addCommand("endcall", endcall,"trans# -- terminate the given transaction");
 	addCommand("crashme", crashme, "force crash of OpenBTS for testing purposes");
 	addCommand("stats", stats,"[patt] -- print all, or selected, performance statistics");
-	addCommand("handover", handover,"[IMSI]-- try to perform handover to another timeslot inside the same BTS");
-	addCommand("handover", handover,"[IMSI]-- try to perform handover to another timeslot inside the same BTS");
+	addCommand("ho", handover,"[IMSI]-- try to perform handover to another timeslot inside the same BTS");
 	addCommand("?", status, "just show transactions");
 }
 
