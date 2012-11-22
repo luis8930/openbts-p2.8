@@ -689,7 +689,7 @@ SIPState  SIPEngine::MOCCheckForOK(Mutex *lock)
 
 SIPState SIPEngine::MOCSendACK()
 {
-	assert(mLastResponse);
+//	assert(mLastResponse);
 
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
 
@@ -1183,7 +1183,7 @@ SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 		mViaBranch.c_str(), mCallIDHeader, mCSeq,
 		ip, port, codec);
 	
-	LOG(ERR) << "handover re-invite is " << invite->message;
+	LOG(ERR) << "sending handover re-invite";
 
 	gSIPInterface.write(&mProxyAddr,invite);
 	osip_message_free(invite);
