@@ -1072,7 +1072,7 @@ void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst)
              if(gTRX.ARFCN()->handover(TN()) )        // just for evaluating; it might be reasonable to activate TCH for handover
                  processBurst(inBurst);
              else
-		OBJLOG(ERR) << "TCHFACCHL1Decoder not active, ignoring input, tn=" << TN();
+		OBJLOG(DEBUG) << "TCHFACCHL1Decoder not active, ignoring input, tn=" << TN();
 		return;
 	}
 	processBurst(inBurst);
