@@ -274,8 +274,8 @@ void SACCHLogicalChannel::serviceLoop()
 					if(this){
 						//ScopedLock lock(mLock);
 
-						const char* chanString = descriptiveString();
-						LOG(WARNING) << descriptiveString();
+//						const char* chanString = descriptiveString();
+//						LOG(WARNING) << descriptiveString();
 						const GSM::LogicalChannel * chan = this;
 						
 						Control::TransactionEntry *transaction = gTransactionTable.find(chan);
@@ -288,9 +288,9 @@ void SACCHLogicalChannel::serviceLoop()
 									//transaction->sendINFO(str.c_str());
 							
 						}
-						else {
-							OBJLOG(WARNING) << chanString << " Measurement w/o transaction";
-						}
+//						else {
+//							OBJLOG(WARNING) << chanString << " Measurement w/o transaction";
+//						}
 					}
 					gPhysStatus.setPhysical(this, mMeasurementResults);
 				} else {

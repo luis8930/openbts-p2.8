@@ -531,7 +531,7 @@ SIPState  SIPEngine::MOCWaitForOK()
 //this isn't working right now -kurtis
 SIPState SIPEngine::MOCSendACK()
 {
-	assert(mLastResponse);
+//	assert(mLastResponse);
 
 	// new branch
 	char tmp[50];
@@ -918,7 +918,7 @@ SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 		mViaBranch.c_str(), mCallIDHeader, mCSeq,
 		ip, port, codec);
 	
-	LOG(ERR) << "handover re-invite is " << invite->message;
+	LOG(ERR) << "sending handover re-invite";
 
 	gSIPInterface.write(&mProxyAddr,invite);
 	osip_message_free(invite);

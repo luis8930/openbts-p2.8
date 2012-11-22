@@ -68,39 +68,24 @@ bool SIP::get_owner_ip( osip_message_t * msg, char * o_addr )
 
 bool SIP::get_rtp_params(const osip_message_t * msg, char * port, char * ip_addr )
 {
-	LOG(ERR) << "inside get_rtp_params [1]";
 	osip_body_t * sdp_body = (osip_body_t*)osip_list_get(&msg->bodies, 0);
 	if (!sdp_body) return false;
 	char * sdp_str = sdp_body->body;
 	if (!sdp_str) return false;
-	LOG(ERR) << "SDP is " << sdp_str;	
-	
-	LOG(ERR) << "inside get_rtp_params [2]";
 	
 	sdp_message_t * sdp;
 	sdp_message_init(&sdp);
 	sdp_message_parse(sdp, sdp_str);
-
-	LOG(ERR) << "inside get_rtp_params [3]";
-
-	LOG(ERR) << "m_port " << sdp_message_m_port_get(sdp,0);
 	
 	char *p;
 	p = strstr(sdp_str,"c=");
 	p+= strlen("c=");
 	char buf[100];
 	sscanf(p+6,"%s",buf);
-	LOG(ERR) << "found " << buf;
-	
-	
-	
+		
 	//LOG(ERR) << "ip " << sdp->c_connection->c_addr;
-	LOG(ERR) << "ip " << buf;
-	LOG(ERR) << "inside get_rtp_params [4]";
 	strcpy(port,sdp_message_m_port_get(sdp,0));
-	LOG(ERR) << "inside get_rtp_params [5]";
 	strcpy(ip_addr, buf);
-	LOG(ERR) << "inside get_rtp_params [6]";
 	return true;
 }
 
