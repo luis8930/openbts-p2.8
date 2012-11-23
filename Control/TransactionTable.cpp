@@ -940,9 +940,9 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	mID(gTransactionTable.newID()),
 	mService(GSM::L3CMServiceType::OutgoingHandover),
 //	mCalled(wCalled),
-//	mGSMState(GSM::MOCInitiated),
+	mGSMState(GSM::NullState),
 	mNumSQLTries(gConfig.getNum("Control.NumSQLTries")),
-//	mChannel(wChannel),
+	mChannel(NULL),
 	mTerminationRequested(false)
 
 {
@@ -1199,6 +1199,12 @@ TransactionEntry* TransactionTable::findBySACCH(const GSM::SACCHLogicalChannel *
 	TransactionEntry *retVal = NULL;
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
 		if (itr->second->deadOrRemoved()) continue;
+
+		if(itr->second->SIPState() == HO_Proxy) {
+			LOG(ERR) << "skipping handover proxy in find()";
+			continue;
+		}
+
 		const GSM::LogicalChannel* thisChan = itr->second->channel();
 		if (thisChan->SACCH() != chan) continue;
 		retVal = itr->second;

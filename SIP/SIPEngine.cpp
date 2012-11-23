@@ -689,6 +689,7 @@ SIPState  SIPEngine::MOCCheckForOK(Mutex *lock)
 
 SIPState SIPEngine::MOCSendACK()
 {
+//	since handover is supported, 200Ok may apper as a response to re-invite
 //	assert(mLastResponse);
 
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
@@ -1863,7 +1864,10 @@ osip_message_t* SIPEngine::get_message(){
 		return NULL;
 	}	
 	
-	if(strcasestr(msg->sip_method,"bye")) saveBYE(msg,false);
+	if(! msg) return msg;
+	
+	LOG(ERR) << "got msg, method=" << msg->sip_method << "; callID=" << mCallID;
+	if(strstr(msg->sip_method,"BYE")) saveBYE(msg,false);
 	
 	return msg;
 }
