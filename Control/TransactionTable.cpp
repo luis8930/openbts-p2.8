@@ -647,9 +647,9 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	mID(gTransactionTable.newID()),
 	mService(GSM::L3CMServiceType::OutgoingHandover),
 //	mCalled(wCalled),
-//	mGSMState(GSM::MOCInitiated),
+	mGSMState(GSM::NullState),
 	mNumSQLTries(gConfig.getNum("Control.NumSQLTries")),
-//	mChannel(wChannel),
+	mChannel(NULL),
 	mTerminationRequested(false)
 
 {
@@ -865,6 +865,10 @@ TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 	// Brute force search.
 	ScopedLock lock(mLock);
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
+		if(itr->second->SIPState() == HO_Proxy) {
+			LOG(ERR) << "skipping handover proxy in find()";
+			continue;
+		}
 		const GSM::LogicalChannel* thisChan = itr->second->channel();
 		//LOG(DEBUG) << "looking for " << *chan << " (" << chan << ")" << ", found " << *(thisChan) << " (" << thisChan << ")";
 		if( strcmp(thisChan->descriptiveString(),chan->descriptiveString()) == 0 ) return itr->second;
