@@ -825,7 +825,8 @@ bool Handover::addHandover(const char* callID, const char* IMSI, unsigned l3ti, 
 	
 	// create a transaction
 	Control::TransactionEntry *transaction = new Control::TransactionEntry(
-		gConfig.getStr("SIP.Proxy.SMS").c_str(),
+//		gConfig.getStr("SIP.Proxy.SMS").c_str(),
+		callerHost,
 		mobileID,
 		TCH,
 		l3ti,

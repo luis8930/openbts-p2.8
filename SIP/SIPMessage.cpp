@@ -514,7 +514,8 @@ osip_message_t * SIP::sip_handover(const char * dialed_number, const char * dest
 	osip_from_set_displayname(request->from, strdup(sip_username));
 
 	osip_uri_init(&request->from->url);
-	osip_uri_set_host(request->from->url, strdup(proxy_ip));
+	osip_uri_set_host(request->from->url, strdup(local_ip));
+	osip_uri_set_port(request->from->url, strdup(local_port));
 	osip_uri_set_username(request->from->url, strdup(sip_username));
 
 	// TO
@@ -595,89 +596,8 @@ osip_message_t * SIP::sip_handover(const char * dialed_number, const char * dest
 
 	return request;	
 }
-/*
-osip_message_t * SIP::sip_reinvite_mo( osip_message_t * invite, int cseq, const char * sip_username, const char *local_ip, const char * rtp_ip, short rtp_port, unsigned codec){
 
-	
-	char local_port[10];
-	sprintf(local_port, "%i", rtp_port);
-	
-	osip_message_t * request;
-	openbts_message_init(&request);
-	// FIXME -- Should use the "force_update" function.
-	request->message_property = 2;
-	request->sip_method = strdup("INVITE");
-	osip_message_set_version(request, strdup("SIP/2.0"));	
-	osip_uri_clone(invite->req_uri, &request->req_uri);
-	
-	//osip_via_clone(invite->vias, &request->vias);
-	osip_via_t * via;
-	char * via_str;
-	osip_message_get_via(invite, 0, &via);
-	osip_via_to_str(via, &via_str);
-	osip_message_set_via(request, via_str);	
-	LOG(ERR) << "handover re-invite via: " << via_str;
-	osip_free(via_str);
-	
-	osip_from_clone(invite->from, &request->from);
-	osip_to_clone(invite->to, &request->to);
-	osip_call_id_clone(invite->call_id, &request->call_id);
-	LOG(ERR) << "handover re-invite from: " << invite->from << " to: " << invite->to;
-	
-	// CSeq
-	osip_cseq_init(&request->cseq);
-	osip_cseq_set_method(request->cseq, strdup("INVITE"));
-	char temp_buf[14];
-	sprintf(temp_buf,"%i",cseq);
-	osip_cseq_set_number(request->cseq, strdup(temp_buf));	
-	
-	osip_contact_t *contact;
-	char *contact_str;
-	osip_message_get_contact(invite, 0, &contact);
-	osip_contact_to_str(contact, &contact_str);
-	osip_message_set_contact(request, contact_str);
-	osip_free(contact_str);
 
-	
-	sdp_message_t * sdp;
-	sdp_message_init(&sdp);
-	sdp_message_v_version_set(sdp, strdup("0"));
-	sdp_message_o_origin_set(sdp, strdup(sip_username), strdup("0"),
-//	strdup("0"), strdup("IN"), strdup("IP4"), strdup(local_ip));
-	strdup("0"), strdup("IN"), strdup("IP4"), strdup(rtp_ip));
-
-	sdp_message_s_name_set(sdp, strdup("Talk Time"));
-	sdp_message_t_time_descr_add(sdp, strdup("0"), strdup("0") );
-
-	sprintf(temp_buf,"%i",rtp_port);
-	sdp_message_m_media_add(sdp, strdup("audio"), 
-		strdup(temp_buf), NULL, strdup("RTP/AVP"));
-	sdp_message_c_connection_add
-	(sdp, 0, strdup("IN"), strdup("IP4"), strdup(rtp_ip),NULL, NULL);
-
-	// FIXME -- This should also be inside the switch?
-	sdp_message_m_payload_add(sdp,0,strdup("3"));
-	switch (codec) {
-		case RTPuLaw:
-			sdp_message_a_attribute_add(sdp,0,strdup("rtpmap"),strdup("0 PCMU/8000"));
-			break;
-		case RTPGSM610:
-			sdp_message_a_attribute_add(sdp,0,strdup("rtpmap"),strdup("3 GSM/8000"));
-			break;
-		default: assert(0);
-	};
-	sdp_message_a_attribute_add(sdp,0,strdup("ptime"),strdup("20"));
-	sdp_message_a_attribute_add(sdp,0,strdup("sendrecv"),0);
-
-	char * sdp_str;
-	sdp_message_to_str(sdp, &sdp_str);
-	osip_message_set_body(request, sdp_str, strlen(sdp_str));
-	osip_free(sdp_str);
-	osip_message_set_content_type(request, strdup("application/sdp"));
-
-	return request;
-}
-*/
 // Take the authorization produced by an earlier invite message.
 
 osip_message_t * SIP::sip_ack(const char * req_uri, const char * dialed_number, const char * sip_username, short wlocal_port, const char * local_ip, const char * proxy_ip, const osip_from_t *from_header, const osip_to_t* to_header, const char * via_branch, const osip_call_id_t* call_id_header, int cseq) {
