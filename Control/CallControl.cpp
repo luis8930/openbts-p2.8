@@ -604,6 +604,7 @@ bool pollInCall(TransactionEntry *transaction, GSM::TCHFACCHLogicalChannel *TCH)
 	// See if the radio link disappeared.
 	if (TCH->radioFailure()) {
 		if(transaction->proxyTransaction()){
+			transaction->channel(NULL);
 			LOG(ERR) << "since this moment a transaction is acting as SIP proxy due to handover";
 			return true;
 		}

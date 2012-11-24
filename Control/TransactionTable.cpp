@@ -866,11 +866,11 @@ TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 	// Brute force search.
 	ScopedLock lock(mLock);
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
-		if(itr->second->SIPState() == HO_Proxy) {
-			LOG(ERR) << "skipping handover proxy in find()";
+		const GSM::LogicalChannel* thisChan = itr->second->channel();
+		if(thisChan == NULL){
+			LOG(ERR) << "skipping zero chan ptr: handover proxy in find()?";
 			continue;
 		}
-		const GSM::LogicalChannel* thisChan = itr->second->channel();
 		//LOG(DEBUG) << "looking for " << *chan << " (" << chan << ")" << ", found " << *(thisChan) << " (" << thisChan << ")";
 		if( strcmp(thisChan->descriptiveString(),chan->descriptiveString()) == 0 ) return itr->second;
 	}
