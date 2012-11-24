@@ -381,6 +381,7 @@ void Control::HandoverCompleteHandler(const GSM::L3HandoverComplete *confirm, GS
 
 	transaction->MTCInitRTP();	// ea obtain peers' rtp from mInvite
 
+	transaction->GSMState(GSM::Active);
 	// continue as if it was a legacy call
 	callManagementLoop(transaction,(GSM::TCHFACCHLogicalChannel*)DCCH);
 }
