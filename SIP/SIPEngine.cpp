@@ -1867,8 +1867,8 @@ osip_message_t* SIPEngine::get_message(){
 	
 	if(! msg) return msg;
 	
-	LOG(ERR) << "got msg, method=" << msg->sip_method << "; callID=" << mCallID;
-	if(strstr(msg->sip_method,"BYE")) saveBYE(msg,false);
+	LOG(ERR) << "got msg, cseq method=" << msg->cseq->method << "; callID=" << mCallID;
+	if(strstr(msg->cseq->method,"BYE")) saveBYE(msg,false);
 	
 	return msg;
 }
