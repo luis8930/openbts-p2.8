@@ -68,6 +68,7 @@ enum CallState {
 	ReleaseRequest,
 	SMSDelivering,
 	SMSSubmitting,
+	HOListening,
 };
 
 

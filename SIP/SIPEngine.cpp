@@ -110,6 +110,7 @@ const char* SIP::SIPStateString(SIPState s)
 		//HO state
 		case HO_Invited: return "HO_Invited";
 		case HO_Command: return "HO_Command";
+		case HO_Proxy: return "HO_Proxy";
 		default: return NULL;
 	}
 }

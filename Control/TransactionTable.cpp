@@ -921,7 +921,8 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	mSubscriber(wSubscriber),
 	mSIP(proxy,mSubscriber.digits()),
 	mService(wService),
-	mChannel(wChannel)
+	mChannel(wChannel),
+	mGSMState(GSM::HOListening)
 {
 	LOG(INFO) << "starting transaction for handover, " << mChannel;
 }
