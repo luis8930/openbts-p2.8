@@ -1175,10 +1175,6 @@ SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 	mViaBranch = tmp;
 	mCSeq++;
 	
-/*	osip_message_t * invite = sip_reinvite_mo( mINVITE, mCSeq,
-		mSIPUsername.c_str(), mSIPIP.c_str(),
-		ip, port, codec);
-*/
 	osip_message_t * invite = sip_reinvite(mRemoteDomain.c_str(), mRemoteUsername.c_str(), 
 		mSIPUsername.c_str(), mSIPPort, mSIPIP.c_str(),
 		mMyToFromHeader, mRemoteToFromHeader,
