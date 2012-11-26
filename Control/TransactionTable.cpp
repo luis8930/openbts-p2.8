@@ -629,9 +629,11 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	mSIP(proxy,mSubscriber.digits()),
 	mService(wService),
 	mChannel(wChannel),
-	mGSMState(GSM::HOListening)
+	mGSMState(GSM::HOListening),
+	mTerminationRequested(false)
 {
 	LOG(INFO) << "starting transaction for handover, " << mChannel;
+	initTimers();
 }
 
 // Handover attempt at the initial site
@@ -657,6 +659,8 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	LOG(ERR) << "\"temporary\" transaction for outgoing handover, created";
 	
 	HOSendINVITE(whichBTS);
+	// FIXME timers are not needed here..
+	initTimers();
 }
 
 
@@ -871,10 +875,7 @@ TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 	ScopedLock lock(mLock);
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
 		const GSM::LogicalChannel* thisChan = itr->second->channel();
-		if(thisChan == NULL){
-			LOG(ERR) << "skipping zero chan ptr: handover proxy in find()?";
-			continue;
-		}
+		if(thisChan == NULL)	continue;
 		//LOG(DEBUG) << "looking for " << *chan << " (" << chan << ")" << ", found " << *(thisChan) << " (" << thisChan << ")";
 		if( strcmp(thisChan->descriptiveString(),chan->descriptiveString()) == 0 ) return itr->second;
 	}

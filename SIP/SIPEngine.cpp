@@ -1005,7 +1005,6 @@ SIPState SIPEngine::HOSendBYEOK()
 
 SIPState SIPEngine::SendBYEOK(struct ::sockaddr_in *addr)
 {
-	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
 	assert(mBYE);
 	osip_message_t * okay = sip_b_okay(mBYE);
 	gSIPInterface.write(addr,okay);

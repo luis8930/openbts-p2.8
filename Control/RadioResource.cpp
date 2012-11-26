@@ -644,7 +644,6 @@ bool HandoverEntry::SipRegister(){
 		}
 		return true;
 	}
-	LOG(WARNING) << "handover: Register not needed yet";
 	return false;
 }
 
@@ -652,12 +651,14 @@ bool HandoverEntry::SipRegister(){
 
 
 bool HandoverEntry::removeHandoverEntry(){
-	status("check to remove handover entry");
 	ScopedLock lock(mLock);
 	
 	if(mGotHA)
 		if(mPhysicalInfoAttempts >= mNy1) {
-			LOG(WARNING) << "removing handover entry: Ny1=" << mNy1 << ", sent " << mPhysicalInfoAttempts;
+			LOG(WARNING) << "removing handover entry: , ref=" <<
+				mHandoverReference <<
+				", gotHA=" << mGotHA << ", gotHC=" << mGotHComplete <<
+				" TA=" <<  mInitialTA << ", sent=" << mPhysicalInfoAttempts;
 			gTRX.ARFCN()->handoverOff(mTCH->TN());
 			// FIXME is it worth doing anything??
 			// originating party does not need it
@@ -667,12 +668,16 @@ bool HandoverEntry::removeHandoverEntry(){
 			return true;
 		}
 	if(mRegisterPerformed) {
-		LOG(WARNING) << "removing handover entry: SIP Register performed, nothing to do";
+		LOG(WARNING) << "removing handover entry: SIP Register performed, nothing to do, ref=" << mHandoverReference;
 		gTRX.ARFCN()->handoverOff(mTCH->TN());	// this will spoil nothing..
 		return true;
 	}
 	if(mT3103.expired() && (!mGotHComplete)){
-		LOG(WARNING) << "removing handover entry: got no handover complete, T3103 expired";
+		LOG(WARNING) << "removing handover entry: got no handover complete, T3103 expired, ref=" <<
+			mHandoverReference <<
+			", gotHA=" << mGotHA << ", gotHC=" << mGotHComplete <<
+			" TA=" <<  mInitialTA << ", sent=" << mPhysicalInfoAttempts;
+		
 		gTRX.ARFCN()->handoverOff(mTCH->TN());
 		// FIXME is it worth doing anything??
 		// originating party does not need it

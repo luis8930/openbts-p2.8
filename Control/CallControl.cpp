@@ -172,6 +172,7 @@ void abortCall(TransactionEntry *transaction, GSM::LogicalChannel *LCH, const GS
 void abortAndRemoveCall(TransactionEntry *transaction, GSM::LogicalChannel *LCH, const GSM::L3Cause& cause)
 {
 	LOG(INFO) << "cause: " << cause << ", transaction: " << *transaction;
+	LOG(ERR) << "handover debug abortAndremoveCall()";
 	abortCall(transaction,LCH,cause);
 	gTransactionTable.remove(transaction);
 }
@@ -516,6 +517,7 @@ bool updateGSMSignalling(TransactionEntry *transaction, GSM::LogicalChannel *LCH
 
 	// Any Q.931 timer expired?
 	if (transaction->anyTimerExpired()) {
+		LOG(ERR) << "handover debug transaction->anyTimerExpired()";
 		// Cause 0x66, "recover on timer expiry"
 		abortCall(transaction,LCH,GSM::L3Cause(0x66));
 		return true;
@@ -627,6 +629,7 @@ bool pollInCall(TransactionEntry *transaction, GSM::TCHFACCHLogicalChannel *TCH)
 
 	// Did an outside process request a termination?
 	if (transaction->terminationRequested()) {
+		LOG(ERR) << "handover debug transaction->terminationRequested()";
 		// Cause 25 is "pre-emptive clearing".
 		abortCall(transaction,TCH,25);
 		// Do the hard release to short-cut the timers.
@@ -1160,8 +1163,7 @@ bool Control::HOProxyDownlinkSM(
 
 	assert(event);
 	if(MSG_IS_RESPONSE(event)) {
-		LOG(ERR) << "handover proxy downlink: resp " << event->status_code;
-		LOG(ERR) << "handover proxy downlink: resp method" << event->cseq->method;
+		LOG(ERR) << "handover proxy downlink: resp " << event->status_code << "(" << event->cseq->method << ")";
 		if(event->status_code == 200){
 			if(strstr(event->cseq->method,"INVITE")){
 			// .. in response to re-invite, send ack
@@ -1175,14 +1177,23 @@ bool Control::HOProxyDownlinkSM(
 				osip_message_free(event);
 				return false;
 			}
+			osip_message_free(event);
+			return false;
+
 		}
-		LOG(ERR) << "handover proxy downlink: unexpected response" << event->status_code;
+		else if(event->status_code < 200){
+		LOG(ERR) << "  handover proxy downlink: ignoring" << event->status_code << "(" << event->cseq->method << ")";
+			
+				osip_message_free(event);
+				return false;
+		}
+		LOG(ERR) << "  handover proxy downlink: unexpected response" << event->status_code << "(" << event->cseq->method << ")";
 		osip_message_free(event);
 		return false;
 	}
 	
 	if(MSG_IS_BYE(event)){
-		LOG(ERR) << "handover proxy downlink: forwarding BYE ";
+		LOG(ERR) << "handover proxy downlink: got BYE, relaying";
 		msc->MTDSendBYEOK();
 		
 		tail->HOSendBYE(false);
@@ -1190,7 +1201,7 @@ bool Control::HOProxyDownlinkSM(
 		return true;
 	}
 	
-	LOG(ERR) << "handover proxy downlink: forwarding " << event->sip_method;
+	LOG(ERR) << "handover proxy downlink: need to relay " << event->sip_method;
 	tail->HOProxy_forward_msg(event);
 					
 	return false;
@@ -1201,8 +1212,7 @@ bool Control::HOProxyUplinkSM(
 	
 	assert(event);
 	if(MSG_IS_RESPONSE(event)) {
-		LOG(ERR) << "handover proxy uplink: resp " << event->status_code;
-		LOG(ERR) << "handover proxy uplink: resp method" << event->cseq->method;
+		LOG(ERR) << "handover proxy uplink: resp " << event->status_code << "(" << event->cseq->method << ")";
 		if(event->status_code == 200){
 			if(strstr(event->cseq->method,"BYE")){
 			// .. BYE is acknowledged
@@ -1210,14 +1220,14 @@ bool Control::HOProxyUplinkSM(
 			return false;
 			}
 		}
-		LOG(ERR) << "handover proxy uplink: unexpected response" 
-			<< event->status_code;
+		LOG(ERR) << "  handover proxy uplink: unexpected response" 
+			<< event->status_code << "(" << event->cseq->method << ")";
 		osip_message_free(event);
 		return false;
 	}
 	
 	if(MSG_IS_BYE(event)){
-		LOG(ERR) << "handover proxy: forwarding BYE ";
+		LOG(ERR) << "handover proxy: relaying BYE ";
 		tail->HOSendBYEOK();
 		
 		msc->MODSendBYE();
@@ -1225,7 +1235,7 @@ bool Control::HOProxyUplinkSM(
 		return true;
 	}
 	
-	LOG(ERR) << "handover proxy: forwarding " << event->sip_method;
+	LOG(ERR) << "handover proxy uolink: need to relay " << event->sip_method;
 	msc->HOProxy_forward_msg(event);
 					
 	return false;
