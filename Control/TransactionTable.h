@@ -101,6 +101,8 @@ class TransactionEntry {
 	bool mProxyTransaction;
 	
 	TransactionEntry *mOldTransaction;	// a link to original call, used for outgoing handovers
+	
+	bool mHOAllowed;	// to prevent from several handover attempts for a single call
 
 	volatile bool mRemoved;			///< true if ready for removal
 
@@ -311,6 +313,9 @@ class TransactionEntry {
 	
 	void HOSendBYEOK()
 		{ mSIP.HOSendBYEOK(); }
+	
+	void handoverFailed()
+		{ mHOAllowed = true; }
 	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)

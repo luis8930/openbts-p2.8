@@ -396,6 +396,20 @@ void Control::HandoverCompleteHandler(const GSM::L3HandoverComplete *confirm, GS
 	callManagementLoop(transaction,(GSM::TCHFACCHLogicalChannel*)DCCH);
 }
 
+void Control::HandoverFailureHandler(const GSM::L3HandoverFailure *failure, GSM::LogicalChannel *DCCH){
+	LOG(ERR) << "handover failed";
+	
+	assert(failure);
+	assert(DCCH);
+	LOG(ERR) << "handover failure: " << *failure;
+	
+	TransactionEntry* transaction = gTransactionTable.find(DCCH);
+	if(transaction==NULL) {	
+		LOG(ERR) << "unable to resolve transaction for handover failure";
+		return;
+	}
+	transaction->handoverFailed();
+}
 
 
 void Pager::addID(const L3MobileIdentity& newID, ChannelType chanType,

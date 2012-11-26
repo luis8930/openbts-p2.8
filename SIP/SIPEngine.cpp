@@ -1126,7 +1126,7 @@ SIPState SIPEngine::MODWaitForERRORACK(bool cancel, Mutex *lock)
 	return mState;
 }
 
-SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
+SIPState SIPEngine::HOSendREINVITE(bool toHost, char *ip, short port, unsigned codec)
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
 	
@@ -1145,7 +1145,8 @@ SIPState SIPEngine::HOSendREINVITE(char *ip, short port, unsigned codec)
 	
 	LOG(ERR) << "sending handover re-invite";
 
-	gSIPInterface.write(&mProxyAddr,invite);
+	if(toHost) gSIPInterface.write(&mProxyAddr,invite);
+	else gSIPInterface.write(&mHOtoBTSAddr,invite);
 	osip_message_free(invite);
 	//mState = ;
 	

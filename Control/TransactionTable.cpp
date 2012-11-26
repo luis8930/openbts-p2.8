@@ -621,7 +621,15 @@ SIP::SIPState TransactionEntry::HOSendREINVITE(char *ip, short port, unsigned co
 {
 	ScopedLock lock(mLock);
 	if(!mProxyTransaction)	mProxyTransaction = true;
-	SIP::SIPState state = mSIP.HOSendREINVITE(ip, port, codec);
+	SIP::SIPState state;
+	if(mService == L3CMServiceType::HandoverOriginatedCall){
+		LOG(ERR) << "the sequence of handovers, can't re-invite host directly";
+		state = mSIP.HOSendREINVITE(false, ip, port, codec);
+	}
+	else {
+		LOG(ERR) << "the fist handover, re-invite host directly";
+		state = mSIP.HOSendREINVITE(true, ip, port, codec);
+	}
 	echoSIPState(state);
 	return state;
 }
@@ -1024,8 +1032,12 @@ SIP::SIPState TransactionEntry::HOCTimeout(){
 void TransactionEntry::HOSendHandoverCommand(GSM::L3CellDescription wCell,
 		GSM::L3ChannelDescription wChan, unsigned wHandoverReference){
 
+	if(!mHOAllowed) {
+		LOG(ERR) << "handover is not allowed now; handover Command is not sent";
+		return;
+	}
 	LOG(ERR) << "handover Command, " << wCell << ", " << wChan << ", " << wHandoverReference;
-	
+	mHOAllowed = false;
 	mChannel->send(L3HandoverCommand(wCell, wChan, wHandoverReference));
 }
 
