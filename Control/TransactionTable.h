@@ -303,8 +303,14 @@ class TransactionEntry {
 	bool reinviteTarget(char *ip, char *port, unsigned *codec)
 		{ return mSIP.reinviteTarget(ip, port , codec);}
 	
-	void HOProxy_resp_forward_forget(osip_message_t *event);
-	void HOProxy_req_forward_forget(osip_message_t *event);
+	void HOProxy_forward_msg(osip_message_t *event);
+	
+	// sending BYE directly to BTS, not to proxy;
+	// signs BYE that just flips the loop
+	void HOSendBYE(bool flip_loop);
+	
+	void HOSendBYEOK()
+		{ mSIP.HOSendBYEOK(); }
 	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)
