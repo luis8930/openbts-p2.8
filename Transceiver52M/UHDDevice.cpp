@@ -55,8 +55,10 @@ const float tx_ampl = .3;
 #ifdef RESAMPLE
 const double rx_smpl_offset = .00005;
 #else
-const double rx_smpl_offset = 9.4457e-5;
+const double rx_smpl_offset = 9.4457e-5; 
 #endif
+
+static TIMESTAMP init_rd_ts = 0;
 
 /** Timestamp conversion
     @param timestamp a UHD or OpenBTS timestamp
@@ -169,8 +171,8 @@ public:
 	bool setTxFreq(double wFreq);
 	bool setRxFreq(double wFreq);
 
-	inline TIMESTAMP initialWriteTimestamp() { return 0; }
-	inline TIMESTAMP initialReadTimestamp() { return 0; }
+	inline TIMESTAMP initialWriteTimestamp() { return init_rd_ts; }
+	inline TIMESTAMP initialReadTimestamp() { return init_rd_ts; }
 
 	inline double fullScaleInputValue() { return 32000 * tx_ampl; }
 	inline double fullScaleOutputValue() { return 32000; }
@@ -354,7 +356,7 @@ double uhd_device::set_rates(double rate)
 	actual_rt = usrp_dev->get_tx_rate();
 
 	if (actual_rt != rate) {
-		LOG(ALERT) << "Actual sample rate differs from desired rate: expected=" << rate << ", got=" << actual_rt;
+		LOG(ALERT) << "Actual sample rate differs from desired rate";
 		return -1.0;
 	}
 	if (usrp_dev->get_rx_rate() != actual_rt) {
@@ -436,7 +438,7 @@ bool uhd_device::open(const std::string &args)
 	}
 
 	// Use the first found device
-	LOG(INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
+	LOG(ALERT) << "Using discovered UHD device " << dev_addrs[0].to_string();
 	try {
 		usrp_dev = uhd::usrp::multi_usrp::make(dev_addrs[0]);
 	} catch(...) {
@@ -522,6 +524,19 @@ void uhd_device::restart(uhd::time_spec_t ts)
 	cmd = uhd::stream_cmd_t::STREAM_MODE_START_CONTINUOUS;
 	cmd.stream_now = true;
 	usrp_dev->issue_stream_cmd(cmd);
+
+	uhd::rx_metadata_t md;
+	uint32_t buff[rx_spp];
+
+	for (int i = 0; i < 50; i++) {
+		usrp_dev->get_device()->recv(buff,
+					     rx_spp,
+					     md,
+					     uhd::io_type_t::COMPLEX_INT16,
+					     uhd::device::RECV_MODE_ONE_PACKET);
+	}
+
+	init_rd_ts = convert_time(md.time_spec, actual_smpl_rt);
 }
 
 bool uhd_device::start()
@@ -705,10 +720,10 @@ int uhd_device::writeSamples(short *buf, int len, bool *underrun,
 
 		if (drop_cnt == 1) {
 			LOG(DEBUG) << "Aligning transmitter: stop burst";
+			*underrun = true;
 			metadata.end_of_burst = true;
 		} else if (drop_cnt < 30) {
 			LOG(DEBUG) << "Aligning transmitter: packet advance";
-			*underrun = true;
 			return len;
 		} else {
 			LOG(DEBUG) << "Aligning transmitter: start burst";
@@ -760,14 +775,18 @@ bool uhd_device::setRxFreq(double wFreq)
 
 bool uhd_device::recv_async_msg()
 {
-	uhd::async_metadata_t metadata;
-	if (!usrp_dev->get_device()->recv_async_msg(metadata))
+	uhd::async_metadata_t md;
+	if (!usrp_dev->get_device()->recv_async_msg(md))
 		return false;
 
 	// Assume that any error requires resynchronization
-	if (metadata.event_code != uhd::async_metadata_t::EVENT_CODE_BURST_ACK) {
+	if (md.event_code != uhd::async_metadata_t::EVENT_CODE_BURST_ACK) {
 		aligned = false;
-		LOG(ERR) << str_code(metadata);
+
+		if ((md.event_code != uhd::async_metadata_t::EVENT_CODE_UNDERFLOW) &&
+		    (md.event_code != uhd::async_metadata_t::EVENT_CODE_TIME_ERROR)) {
+			LOG(ERR) << str_code(md);
+		}
 	}
 
 	return true;
@@ -884,7 +903,7 @@ ssize_t smpl_buf::read(void *buf, size_t len, TIMESTAMP timestamp)
 		num_smpls = len;
 
 	// Starting index
-	size_t read_start = data_start + (timestamp - time_start);
+	size_t read_start = data_start + (timestamp - time_start) % buf_len;
 
 	// Read it
 	if (read_start + num_smpls < buf_len) {

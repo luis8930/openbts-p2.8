@@ -58,14 +58,16 @@ static void ctrlCHandler(int signo)
 int main(int argc, char *argv[])
 {
   std::string deviceArgs;
-  
-  if (argc == 3){
-      deviceArgs = std::string(argv[2]);
+
+  if (argc == 3)
+  {
+    deviceArgs = std::string(argv[2]);
   }
-  else{
-      deviceArgs = "";
+  else
+  {
+    deviceArgs = "";
   }
-  
+
   if ( signal( SIGINT, ctrlCHandler ) == SIG_ERR )
   {
     cerr << "Couldn't install signal handler for SIGINT" << endl;
