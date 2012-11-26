@@ -41,6 +41,7 @@ class L3AssignmentComplete;
 class TCHFACCHLogicalChannel;
 class L3PhysicalInformation;
 class L3HandoverComplete;
+class L3HandoverFailure;
 class L3MobileIdentity;
 class Z100Timer;
 };
@@ -61,6 +62,8 @@ void AssignmentCompleteHandler(const GSM::L3AssignmentComplete*, GSM::TCHFACCHLo
 /** Find and compelte the in-process transaction associated with a successful handover. */
 void HandoverCompleteHandler(const GSM::L3HandoverComplete*, GSM::LogicalChannel*);
 
+/** Find transaction and allow new handovers for it. */
+void HandoverFailureHandler(const GSM::L3HandoverFailure*, GSM::LogicalChannel*);
 
 
 

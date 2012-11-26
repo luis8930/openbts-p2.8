@@ -331,7 +331,7 @@ public:
 	
 	SIPState HOSendACK();
 	
-	SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
+	SIPState HOSendREINVITE(bool toHost, char *ip, short port, unsigned codec);
 	
 	SIPState HOSendBYEOK();
 	
