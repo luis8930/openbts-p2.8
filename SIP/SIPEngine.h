@@ -69,10 +69,6 @@ enum SIPState  {
 	HO_Invited,
 	HO_Command,
 	HO_Proxy
-	
-//	HO_Initiated,
-//	HO_WaitAccess,
-//	HO_Active
 };
 
 
@@ -114,6 +110,7 @@ private:
 	unsigned mProxyPort;			///< UDP port number of the SIP proxy
 	struct ::sockaddr_in mProxyAddr;	///< the ready-to-use UDP address
 	
+	// FIXME are there any reasons to keep both addresses? dmisol
 	struct ::sockaddr_in mHOtoBTSAddr;	///< target iBTS address
 
 	//@}
@@ -298,9 +295,6 @@ public:
 
 	//@}
 	
-	SIPState HOCSendOK(short rtpPort, unsigned codec);
-	
-	SIPState HOCSendTemporarilyUnavailable();
 
 
 	/**@name Messages for MOD procedure. */
@@ -331,14 +325,24 @@ public:
 
 	SIPState MTDSendCANCELOK();
 	//@}
+	
+	
 	SIPState HOSendINVITE(string whichBTS);
-//	SIPState HOWaitForOK();
+	
 	SIPState HOSendACK();
+	
 	SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
+	
+	SIPState HOSendBYEOK();
+	
+	SIPState HOSendBYE();
 	
 	// sip body must contain target cell parameters for handover
 	SIPState HOCSendProceeding(const char *body);
-
+	
+	SIPState HOCSendOK(short rtpPort, unsigned codec);
+	
+	SIPState HOCSendTemporarilyUnavailable();
 
 	/** Set up to start sending RFC2833 DTMF event frames in the RTP stream. */
 	bool startDTMF(char key);
@@ -393,6 +397,9 @@ public:
 
 	private:
 
+	SIPState SendBYE(struct ::sockaddr_in *addr);
+	
+	SIPState SendBYEOK(struct ::sockaddr_in *addr);
 	/**
 		Initialize the RTP session.
 		@param msg A SIP INVITE or 200 OK wth RTP parameters

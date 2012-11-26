@@ -369,15 +369,7 @@ SIP::SIPState TransactionEntry::MOCSendACK()
 	echoSIPState(state);
 	return state;
 }
-/*
-SIP::SIPState TransactionEntry::HOWaitForOK()
-{
-	ScopedLock lock(mLock);
-	SIP::SIPState state = mSIP.HOWaitForOK();
-	echoSIPState(state);
-	return state;
-}
-*/
+
 SIP::SIPState TransactionEntry::HOSendACK()
 {
 	ScopedLock lock(mLock);
@@ -1102,13 +1094,16 @@ bool TransactionEntry::HOSetupFinished(){
 }
 
 /* just now - dummy functions */
-void TransactionEntry::HOProxy_resp_forward_forget(osip_message_t *event){
+
+void TransactionEntry::HOProxy_forward_msg(osip_message_t *event){
+	LOG(ERR) << "handover debug: DUMMY function (!)" << event->sip_method;
 	osip_message_free(event);
 	return;
 }
-void TransactionEntry::HOProxy_req_forward_forget(osip_message_t *event){
-	osip_message_free(event);
-	return;
+
+void TransactionEntry::HOSendBYE(bool flip_loop){
+	if(!flip_loop) mSIP.HOSendBYE();
+	LOG(ERR) << "handover: flipping loops not implemented yet";
 }
 
 // vim: ts=4 sw=4

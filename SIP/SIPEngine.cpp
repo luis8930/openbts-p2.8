@@ -560,6 +560,20 @@ SIPState SIPEngine::MODSendBYE()
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
 	assert(mINVITE);
+	return SendBYE(&mProxyAddr);
+}
+
+SIPState SIPEngine::HOSendBYE()
+{
+	LOG(INFO) << "handover; user " << mSIPUsername << " state " << mState;
+	assert(mINVITE);
+	return SendBYE(&mHOtoBTSAddr);
+}
+
+SIPState SIPEngine::SendBYE(struct ::sockaddr_in *addr)
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+	assert(mINVITE);
 	char tmp[50];
 	make_branch(tmp);
 	mViaBranch = tmp;
@@ -571,7 +585,7 @@ SIPState SIPEngine::MODSendBYE()
 		mMyToFromHeader, mRemoteToFromHeader,
 		mViaBranch.c_str(), mCallIDHeader, mCSeq );
 
-	gSIPInterface.write(&mProxyAddr,bye);
+	gSIPInterface.write(addr,bye);
 	saveBYE(bye,true);
 	osip_message_free(bye);
 	mState = MODClearing;
@@ -790,8 +804,6 @@ SIPState SIPEngine::HOSendINVITE(string whichBTS)
 	
 	// Send Invite.
 
-
-//	if (! resolveAddress(&mHOtoBTSAddr, whichBTS.c_str(), mSIPPort)) {
 	if (! resolveAddress(&mHOtoBTSAddr, whichBTS.c_str())) {
 		LOG(ALERT) << "handover cannot resolve IP address for " << whichBTS;
 		return mState;
@@ -820,56 +832,6 @@ bool SIPEngine::reinviteTarget(char *ip, char *port, unsigned *codec){
 	LOG(ERR) << "last response is" << mLastResponse;
 	return get_rtp_params(mLastResponse, port, ip);
 }
-/*
-SIPState  SIPEngine::HOWaitForOK()
-{
-	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
-
-	osip_message_t * msg;
-
-	// Read off the fifo. if time out will
-	// clean up and return false.
-	try {
-		msg = gSIPInterface.read(mCallID, gConfig.getNum("SIP.Timer.A"));
-	}
-	catch (SIPTimeout& e) { 
-		LOG(DEBUG) << "timeout";
-		mState = Timeout;
-		return mState;
-	}
-
-	int status = msg->status_code;
-	LOG(DEBUG) << "received status " << status;
-	saveResponse(msg);
-	switch (status) {
-		case 100:	// Trying
-		case 183:	// Progress
-			mState = HO_WaitAccess;
-			break;
-		case 200:	// OK
-			// Save the response and update the state,
-			// but the ACK doesn't happen until the call connects.
-			mState = HO_Active;
-			
-			break;
-		// Anything 400 or above terminates the call, so we ACK.
-		// FIXME -- It would be nice to save more information about the
-		// specific failure cause.
-		case 486:
-		case 503:
-			mState = Busy;
-			HOSendACK();
-			break;
-		default:
-			LOG(NOTICE) << "unhandled status code " << status;
-			mState = Fail;
-			MOCSendACK();
-	}
-	osip_message_free(msg);
-	LOG(DEBUG) << " new state: " << mState;
-	return mState;
-}
-*/
 
 //this isn't working right now -kurtis
 SIPState SIPEngine::HOSendACK()
@@ -979,7 +941,7 @@ SIPState SIPEngine::HOCSendOK( short wRTPPort, unsigned wCodec )
 
 SIPState SIPEngine::MTDCheckBYE()
 {
-	//LOG(DEBUG) << "user " << mSIPUsername << " state " << mState;
+	LOG(DEBUG) << "call Id " << mCallID << " state " << mState;
 	// If the call is not active, there should be nothing to check.
 	if (mState!=Active) return mState;
 	
@@ -1031,13 +993,26 @@ SIPState SIPEngine::MTDCheckBYE()
 SIPState SIPEngine::MTDSendBYEOK()
 {
 	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+	return SendBYEOK(&mProxyAddr);
+}
+
+SIPState SIPEngine::HOSendBYEOK()
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+	return SendBYEOK(&mHOtoBTSAddr);
+}
+
+SIPState SIPEngine::SendBYEOK(struct ::sockaddr_in *addr)
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
 	assert(mBYE);
 	osip_message_t * okay = sip_b_okay(mBYE);
-	gSIPInterface.write(&mProxyAddr,okay);
+	gSIPInterface.write(addr,okay);
 	osip_message_free(okay);
 	mState = Cleared;
 	return mState;
 }
+
 
 SIPState SIPEngine::MTDSendCANCELOK()
 {

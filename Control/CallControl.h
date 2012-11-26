@@ -73,8 +73,10 @@ bool HOAttemptSM(osip_message_t *event, TransactionEntry *transaction);
  *  returns true if still needed 
  *  Downlink - from switch to handover chain 
  *  Uplink - from chain towards switch */
-bool HOProxyDownlinkSM(osip_message_t *event, TransactionEntry *transaction);
-bool HOProxyUplinkSM(osip_message_t *event, TransactionEntry *transaction);
+bool HOProxyDownlinkSM(
+	osip_message_t *event, TransactionEntry *scr_msc, TransactionEntry *dst_tail);
+bool HOProxyUplinkSM(
+	osip_message_t *event, TransactionEntry *src_tail, TransactionEntry *dst_msc);
 
 /**@name Test Call */
 //@{

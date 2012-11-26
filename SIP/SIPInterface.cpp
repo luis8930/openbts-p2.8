@@ -345,13 +345,16 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 
 	// Get the caller ID if it's available.
 	//const char *callerID = "";
-	const char *callerHost = "";
+	char callerHostAndIp[50];
 	osip_from_t *from = osip_message_get_from(msg);
 	if (from) {
 		osip_uri_t* url = osip_contact_get_url(from);
-		if (url) {
-	//		if (url->username) callerID = url->username;
-			if (url->host) callerHost = url->host;
+		if (url) {			
+			strcpy(callerHostAndIp,url->host);
+			strcat(callerHostAndIp,":");
+			strcat(callerHostAndIp,url->port);
+			//if (url->host) callerHost = url->host;
+			//if (url->string) callerHost = url->string;
 		}
 	}
 	
@@ -385,7 +388,7 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 	// - link transaction and handover entry
 	// - send Ack (ea Proceeding
 	addCall(callIDNum);
-	gBTS.handover().addHandover(callIDNum,IMSI,l3ti,callerHost,msg);
+	gBTS.handover().addHandover(callIDNum,IMSI,l3ti,callerHostAndIp,msg);
 		
 
 

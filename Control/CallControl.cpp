@@ -130,6 +130,7 @@ void forceSIPClearing(TransactionEntry *transaction)
 	if (transaction->SIPFinished()) return;
 	if (state==SIP::Active){
 		//Changes state to clearing
+		LOG(ERR) << "handover debug; BYE from forceSIPClearing()";
 		transaction->MODSendBYE();
 		//then cleared
 		transaction->MODWaitForBYEOK();
@@ -157,6 +158,7 @@ void abortCall(TransactionEntry *transaction, GSM::LogicalChannel *LCH, const GS
 {
 	LOG(INFO) << "cause: " << cause << ", transaction: " << *transaction;
 	if (LCH) forceGSMClearing(transaction,LCH,cause);
+	LOG(ERR) << "handover debug; forceSIPClearing() from abortCall()";		
 	forceSIPClearing(transaction);
 }
 
@@ -238,6 +240,7 @@ bool assignTCHF(TransactionEntry *transaction, GSM::LogicalChannel *DCCH, GSM::T
 	// RR Cause 0x04 -- "abnormal release, no activity on the radio path"
 	DCCH->send(GSM::L3ChannelRelease(0x04));
 	// Shut down the SIP side of the call.
+	LOG(ERR) << "handover debug; forceSIPClearing() from aassignTCHF()";		
 	forceSIPClearing(transaction);
 	// Indicate failure.
 	return false;
@@ -327,6 +330,7 @@ bool callManagementDispatchGSM(TransactionEntry *transaction, GSM::LogicalChanne
 		transaction->GSMState(GSM::ReleaseRequest);
 		//bug #172 fixed
 		if (transaction->SIPState()==SIP::Active){
+			LOG(ERR) << "handover debug; BYE from ..DispatchGSM()";
 			transaction->MODSendBYE();
 			transaction->MODWaitForBYEOK();
 		}
@@ -381,6 +385,7 @@ bool callManagementDispatchGSM(TransactionEntry *transaction, GSM::LogicalChanne
 		// The IMSI detach procedure will release the LCH.
 		LOG(INFO) << "GSM IMSI Detach " << *transaction;
 		IMSIDetachController(detach,LCH);
+		LOG(ERR) << "handover debug; forceSIPClearing() from dispatchGSM() - phone off";		
 		forceSIPClearing(transaction);
 		return true;
 	}
@@ -601,18 +606,17 @@ bool updateSignalling(TransactionEntry *transaction, GSM::LogicalChannel *LCH, u
 */
 bool pollInCall(TransactionEntry *transaction, GSM::TCHFACCHLogicalChannel *TCH)
 {
+	if(transaction->proxyTransaction()){
+		transaction->channel(NULL);
+		LOG(ERR) << "since this moment a transaction is acting as SIP proxy due to handover";
+		return true;
+	}
+
 	// See if the radio link disappeared.
 	if (TCH->radioFailure()) {
-		if(transaction->proxyTransaction()){
-			transaction->channel(NULL);
-			LOG(ERR) << "since this moment a transaction is acting as SIP proxy due to handover";
-			return true;
-		}
-		else {
-			LOG(NOTICE) << "radio link failure, dropped call";
-			forceSIPClearing(transaction);
-			return true;
-		}
+		LOG(NOTICE) << "radio link failure, dropped call";
+		forceSIPClearing(transaction);
+		return true;
 	}
 
 	// Process pending SIP and GSM signalling.
@@ -1151,30 +1155,80 @@ void Control::initiateMTTransaction(TransactionEntry *transaction, GSM::ChannelT
 
 /* The reason to keep different functions for proxy SM is
  *  to implement (later on) logic of flipping loops */
-bool Control::HOProxyDownlinkSM(osip_message_t *event, TransactionEntry *transaction){
+bool Control::HOProxyDownlinkSM(
+	osip_message_t *event, TransactionEntry *msc, TransactionEntry *tail){
+
 	assert(event);
 	if(MSG_IS_RESPONSE(event)) {
-		LOG(ERR) << "handover proxy: forwarding resp " << event->status_code;
-		transaction->HOProxy_resp_forward_forget(event);
+		LOG(ERR) << "handover proxy downlink: resp " << event->status_code;
+		LOG(ERR) << "handover proxy downlink: resp method" << event->cseq->method;
+		if(event->status_code == 200){
+			if(strstr(event->cseq->method,"INVITE")){
+			// .. in response to re-invite, send ack
+			// FIXME ? need special function - not to change mSIP status
+				msc->MOCSendACK();
+				osip_message_free(event);
+				return false;
+			}
+			if(strstr(event->cseq->method,"BYE")){
+			// .. BYE is acknowledged
+				osip_message_free(event);
+				return false;
+			}
+		}
+		LOG(ERR) << "handover proxy downlink: unexpected response" << event->status_code;
+		osip_message_free(event);
+		return false;
+	}
+	
+	if(MSG_IS_BYE(event)){
+		LOG(ERR) << "handover proxy downlink: forwarding BYE ";
+		msc->MTDSendBYEOK();
+		
+		tail->HOSendBYE(false);
+		osip_message_free(event);
+		return true;
+	}
+	
+	LOG(ERR) << "handover proxy downlink: forwarding " << event->sip_method;
+	tail->HOProxy_forward_msg(event);
+					
+	return false;
+}
+
+bool Control::HOProxyUplinkSM(
+	osip_message_t *event, TransactionEntry *tail, TransactionEntry *msc){
+	
+	assert(event);
+	if(MSG_IS_RESPONSE(event)) {
+		LOG(ERR) << "handover proxy uplink: resp " << event->status_code;
+		LOG(ERR) << "handover proxy uplink: resp method" << event->cseq->method;
+		if(event->status_code == 200){
+			if(strstr(event->cseq->method,"BYE")){
+			// .. BYE is acknowledged
+			osip_message_free(event);	
+			return false;
+			}
+		}
+		LOG(ERR) << "handover proxy uplink: unexpected response" 
+			<< event->status_code;
+		osip_message_free(event);
 		return false;
 	}
 	
 	if(MSG_IS_BYE(event)){
 		LOG(ERR) << "handover proxy: forwarding BYE ";
+		tail->HOSendBYEOK();
 		
-		transaction->MODSendBYE();
+		msc->MODSendBYE();
 		osip_message_free(event);
 		return true;
 	}
 	
 	LOG(ERR) << "handover proxy: forwarding " << event->sip_method;
-	transaction->HOProxy_req_forward_forget(event);
+	msc->HOProxy_forward_msg(event);
 					
 	return false;
-}
-
-bool Control::HOProxyUplinkSM(osip_message_t *event, TransactionEntry *transaction){
-	return HOProxyDownlinkSM(event, transaction);
 }
 
 // vim: ts=4 sw=4

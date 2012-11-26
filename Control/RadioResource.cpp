@@ -958,7 +958,7 @@ bool OutgoingHandover::isFinished(){
 	msg = mTransactionHO->HOGetSIPMessage();
 	if(msg != NULL) {
 		LOG(ERR) << "msg from the tail, after handover, method=" << msg->sip_method;
-		term = HOProxyUplinkSM(msg, mTransactionMSC);
+		term = HOProxyUplinkSM(msg, mTransactionHO, mTransactionMSC);
 	}
 	if(term) {
 		mTransactionHO->MTDSendBYEOK();
@@ -974,7 +974,7 @@ bool OutgoingHandover::isFinished(){
 	msg = mTransactionMSC->HOGetSIPMessage();
 	if(msg != NULL) {
 		LOG(ERR) << "msg from the MSC, after handover, method=" << msg->sip_method;
-		term = HOProxyDownlinkSM(msg, mTransactionHO);
+		term = HOProxyDownlinkSM(msg, mTransactionMSC, mTransactionHO);
 	}
 	if(term) {
 		gSIPInterface.removeCall(mTransactionHO->SIPCallID());
