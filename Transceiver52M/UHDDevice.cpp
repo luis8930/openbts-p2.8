@@ -360,7 +360,7 @@ double uhd_device::set_rates(double rate)
 	actual_rt = usrp_dev->get_tx_rate();
 
 	if (actual_rt != rate) {
-		LOG(ALERT) << "Actual sample rate differs from desired rate: expected=" << rate << ", got=" << actual_rt;
+		LOG(ALERT) << "Actual sample rate differs from desired rate";
 		return -1.0;
 	}
 	if (usrp_dev->get_rx_rate() != actual_rt) {
@@ -462,7 +462,7 @@ bool uhd_device::open(const std::string &args)
 	}
 
 	// Use the first found device
-	LOG(INFO) << "Using discovered UHD device " << dev_addrs[0].to_string();
+	LOG(ALERT) << "Using discovered UHD device " << dev_addrs[0].to_string();
 	try {
 		usrp_dev = uhd::usrp::multi_usrp::make(dev_addrs[0]);
 	} catch(...) {
