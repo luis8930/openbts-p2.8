@@ -1272,7 +1272,6 @@ SIPState SIPEngine::HOSendBYEOK()
 
 SIPState SIPEngine::SendBYEOK(struct ::sockaddr_in *addr)
 {
-	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
 	assert(mBYE);
 	gReports.incr("OpenBTS.SIP.BYE-OK.Out");
 	osip_message_t * okay = sip_b_okay(mBYE);
