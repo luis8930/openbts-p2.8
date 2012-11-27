@@ -1406,6 +1406,7 @@ osip_message_t * SIP::sip_reinvite(const char * request_uri, const char * dialed
 	request->sip_method = strdup("INVITE");
 	osip_message_set_version(request, strdup("SIP/2.0"));	
 	
+	LOG(ERR) << "handover debug: dialed_number (ea uri_username) is " << dialed_number;
 	osip_uri_init(&request->req_uri);
 	osip_uri_set_host(request->req_uri, strdup(request_uri));
 	osip_uri_set_username(request->req_uri, strdup(dialed_number));

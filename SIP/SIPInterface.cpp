@@ -397,22 +397,38 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 	sscanf(callIDNum+strlen(HANSOVER_SIGNATURE),"%d",&l3ti);
 //	if(!l3ti) return false;
 	
+	LOG(ERR) << "handover invite (or re-invite) callID=" << callIDNum;
+	
 	// this is really a request for handover
 
 	// Get the caller ID if it's available.
 	//const char *callerID = "";
-	char callerHostAndIp[50];
+	char callerHostAndIp[100];
 	osip_from_t *from = osip_message_get_from(msg);
+	LOG(ERR) << "handover invite (or re-invite), got \'from\'";
 	if (from) {
 		osip_uri_t* url = osip_contact_get_url(from);
 		if (url) {			
+			LOG(ERR) << "handover invite (or re-invite), fetch \'url\'";
+			LOG(ERR) << "handover invite (or re-invite), host is " << url->host;
+			LOG(ERR) << "handover invite (or re-invite), port is " << url->port;
 			strcpy(callerHostAndIp,url->host);
-			strcat(callerHostAndIp,":");
-			strcat(callerHostAndIp,url->port);
-			//if (url->host) callerHost = url->host;
-			//if (url->string) callerHost = url->string;
+			if(!strchr(callerHostAndIp,':')){
+				// FIXME looks strange, meanwhile url->host can contain
+				// smth like ip:host
+				strcat(callerHostAndIp,":");
+				strcat(callerHostAndIp,url->port);
+			}
+		}
+		else {
+			LOG(ERR) << "handover invite (or re-invite), cant fetch \'url\'";
 		}
 	}
+	else {
+		LOG(ERR) << "handover debug, checkInvite, \'from\' failed";
+	}
+	
+	LOG(ERR) << "handover invite (or re-invite), checking IMSI";
 	
 	// Get request username (IMSI) from invite. 
 	const char* IMSI = extractIMSI(msg);
@@ -436,6 +452,21 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 		return true;
 	}
 */	
+	L3MobileIdentity mobileID(IMSI);
+	TransactionEntry* transaction= gTransactionTable.find(mobileID,callIDNum);
+		// There's a FIFO but no trasnaction record?
+		if (transaction) {
+			LOG(ERR) << "handover debug: need to fetch ip:port&codec and relay re-invite";
+			char ip[20], port_str[10];
+			short port;
+			unsigned codec;
+		
+			transaction->reinviteTarget(msg, ip, port_str, &codec);
+			port = atoi(port_str);
+			transaction->HOSendOK(msg);
+			transaction->callingTransaction()->HOSendREINVITE(ip, port, codec);
+			return true;
+		}
 	// this fuction will
 	// - allocate channel
 	// - allocate handover reference
