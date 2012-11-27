@@ -1194,7 +1194,6 @@ bool Control::HOProxyDownlinkSM(
 	
 	if(MSG_IS_BYE(event)){
 		LOG(ERR) << "handover proxy downlink: got BYE, relaying";
-		msc->MTDSendBYEOK();
 		
 		tail->HOSendBYE(false);
 		osip_message_free(event);
@@ -1228,7 +1227,6 @@ bool Control::HOProxyUplinkSM(
 	
 	if(MSG_IS_BYE(event)){
 		LOG(ERR) << "handover proxy: relaying BYE ";
-		tail->HOSendBYEOK();
 		
 		msc->MODSendBYE();
 		osip_message_free(event);
