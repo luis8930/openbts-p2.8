@@ -191,6 +191,7 @@ public:
 	bool handoverTarget(char *cell, char *chan , unsigned *reference);
 	/** fetch parameters for re-invite during handover */
 	bool reinviteTarget(char *ip, char *port, unsigned *codec);
+	bool reinviteTarget(osip_message_t * msg, char *ip, char *port, unsigned *codec);
 	/**@name Messages for SIP registration. */
 	//@{
 
@@ -336,6 +337,8 @@ public:
 	SIPState HOSendBYEOK();
 	
 	SIPState HOSendBYE();
+	
+	void HOSendOK(osip_message_t * msg);
 	
 	// sip body must contain target cell parameters for handover
 	SIPState HOCSendProceeding(const char *body);

@@ -396,8 +396,8 @@ SIP::SIPState TransactionEntry::HOSendREINVITE(char *ip, short port, unsigned co
 	SIP::SIPState state;
 	if(mService == L3CMServiceType::HandoverOriginatedCall){
 		LOG(ERR) << "the sequence of handovers, can't re-invite host directly";
-		//state = mSIP.HOSendREINVITE(false, ip, port, codec);
-		state = mSIP.HOSendREINVITE(true, ip, port, codec);
+		state = mSIP.HOSendREINVITE(false, ip, port, codec);
+		//state = mSIP.HOSendREINVITE(true, ip, port, codec);
 	}
 	else {
 		LOG(ERR) << "the fist handover, re-invite host directly";
@@ -664,6 +664,10 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	initTimers();
 }
 
+void TransactionEntry::HOSendOK(osip_message_t * msg){
+	ScopedLock lock(mLock);
+	mSIP.HOSendOK(msg);
+}
 
 SIP::SIPState TransactionEntry::HOCSendHandoverAck(unsigned wHandoverReference, 
 		unsigned wBCC, unsigned wNCC, unsigned wC0,

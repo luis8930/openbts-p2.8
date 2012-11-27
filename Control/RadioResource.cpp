@@ -609,14 +609,12 @@ bool HandoverEntry::T3105Tick(){
 
 
 void HandoverEntry::HandoverCompleteDetected(){
-	status("(he1)handover complete detected");
+	status("handover complete detected");
 	ScopedLock lock(mLock);
 	
 	mGotHA = false;
 	mGotHComplete = true;
 	mT3103.reset();	//?? mT3103.stop();
-	
-	status("(he2)handover done");
 }
 
 

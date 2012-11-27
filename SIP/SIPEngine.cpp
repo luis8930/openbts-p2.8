@@ -824,13 +824,24 @@ bool SIPEngine::handoverTarget(char *cell, char *chan , unsigned *reference){
 }
 
 bool SIPEngine::reinviteTarget(char *ip, char *port, unsigned *codec){
-	if(mLastResponse == NULL) {
+	return reinviteTarget(mLastResponse, ip, port, codec);
+/*	if(mLastResponse == NULL) {
 		LOG(ERR) << "no last response";
 		return false;
 	}
 	*codec = RTPGSM610;
 	LOG(ERR) << "last response is" << mLastResponse;
 	return get_rtp_params(mLastResponse, port, ip);
+*/
+}
+
+bool SIPEngine::reinviteTarget(osip_message_t * msg, char *ip, char *port, unsigned *codec){
+	if(msg == NULL) {
+		LOG(ERR) << "no message to fetch target endpoint";
+		return false;
+	}
+	*codec = RTPGSM610;
+	return get_rtp_params(msg, port, ip);
 }
 
 //this isn't working right now -kurtis
@@ -871,16 +882,29 @@ SIPState SIPEngine::HOSendREINVITE(bool toHost, char *ip, short port, unsigned c
 	mViaBranch = tmp;
 	mCSeq++;
 	
-	osip_message_t * invite = sip_reinvite(mRemoteDomain.c_str(), mRemoteUsername.c_str(), 
+	LOG(ERR) << "handover debug: reinvite mRemoteUsername " << mRemoteUsername;
+	LOG(ERR) << "handover debug: reinvite mRemoteUsername.c_str() " << mRemoteUsername.c_str();
+	
+	osip_message_t * invite;
+	if(toHost)
+		invite = sip_reinvite(mRemoteDomain.c_str(), mRemoteUsername.c_str(), 
 		mSIPUsername.c_str(), mSIPPort, mSIPIP.c_str(),
 		mMyToFromHeader, mRemoteToFromHeader,
 		mViaBranch.c_str(), mCallIDHeader, mCSeq,
 		ip, port, codec);
+	else 
+		invite = sip_reinvite(mRemoteDomain.c_str(), mSIPUsername.c_str(), 
+		mSIPUsername.c_str(), mSIPPort, mSIPIP.c_str(),
+		mMyToFromHeader, mRemoteToFromHeader,
+		mViaBranch.c_str(), mCallIDHeader, mCSeq,
+		ip, port, codec);
+	    
 	
 	LOG(ERR) << "sending handover re-invite";
-
+/*
 	if(toHost) gSIPInterface.write(&mProxyAddr,invite);
 	else gSIPInterface.write(&mHOtoBTSAddr,invite);
+*/	gSIPInterface.write(&mProxyAddr,invite);
 	osip_message_free(invite);
 	//mState = ;
 	
@@ -937,7 +961,17 @@ SIPState SIPEngine::HOCSendOK( short wRTPPort, unsigned wCodec )
 	return mState;
 }
 
-
+void SIPEngine::HOSendOK(osip_message_t * msg)
+{
+	LOG(ERR) << "200 OK handover re-invite" << mSIPUsername;
+	assert(msg);
+	osip_message_t * okay = sip_okay(msg, mSIPUsername.c_str(),
+		mSIPIP.c_str(), mSIPPort);
+	
+	gSIPInterface.write(okay);	// send directly to BTS
+	osip_message_free(okay);
+	return;
+}
 
 
 SIPState SIPEngine::MTDCheckBYE()

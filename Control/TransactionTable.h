@@ -228,7 +228,9 @@ class TransactionEntry {
 	// few functions below are needed to serve outgoing handover inside a 
 	// "temporary" transaction
 		SIP::SIPState HOSendINVITE(string whichBTS);
-//		SIP::SIPState HOWaitForOK();
+		
+		// send 200 Ok  for re-invite from handover chain
+		void HOSendOK(osip_message_t * msg);
 		SIP::SIPState HOSendACK();
 		SIP::SIPState HOSendREINVITE(char *ip, short port, unsigned codec);
 	
@@ -299,6 +301,8 @@ class TransactionEntry {
 		{ return mSIP.handoverTarget(cell, chan , reference);}
 	bool reinviteTarget(char *ip, char *port, unsigned *codec)
 		{ return mSIP.reinviteTarget(ip, port , codec);}
+	bool reinviteTarget(osip_message_t * msg, char *ip, char *port, unsigned *codec)
+		{ return mSIP.reinviteTarget(msg, ip, port , codec);}
 	
 	void HOProxy_forward_msg(osip_message_t *event);
 	
