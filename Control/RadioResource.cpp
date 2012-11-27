@@ -1006,6 +1006,8 @@ bool OutgoingHandover::isFinished(){
 		term = HOProxyDownlinkSM(msg, mTransactionMSC, mTransactionHO);
 	}
 	if(term) {
+		mTransactionMSC->MTDSendBYEOK();
+		
 		gSIPInterface.removeCall(mTransactionHO->SIPCallID());
 		gTransactionTable.remove(mTransactionHO);
 
