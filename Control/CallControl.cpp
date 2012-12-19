@@ -1341,8 +1341,8 @@ bool Control::HOProxyUplinkSM(
 		// need to ACK it with 200 and send further
 		// FIXME: I'm not waiting for 200 any more
 		tail->HOSendOK(event);
-		LOG(ERR) << "handover-proxy relaying DTMF" << event->bodies->node->element;
-		msc->HOCSendINFO(event->bodies->node->element);
+		LOG(ERR) << "handover-proxy relaying DTMF" << event->bodies.node->element;
+		msc->HOCSendINFO(event->bodies.node->element);
 		osip_message_free(event);
 	}
 	

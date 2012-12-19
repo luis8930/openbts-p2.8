@@ -1381,8 +1381,9 @@ osip_message_t * SIP::sip_info(void * body, const char *dialed_number, short rtp
 	sprintf(temp_buf,"%i",cseq);
 	osip_cseq_set_number(request->cseq, strdup(temp_buf));	
 
-	sip_message_set_content_type(request, strdup("application/dtmf-relay"));
-	//osip_message_set_content_length(request, strdup(temp_buf));
+	osip_message_set_content_type(request, strdup("application/dtmf-relay"));
+	sprintf(temp_buf,"%d", strlen((char*)body));
+	osip_message_set_content_length(request, strdup(temp_buf));
 
 	// Payload.
 	//osip_message_set_body(request,message,strlen(message));
