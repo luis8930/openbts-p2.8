@@ -398,6 +398,8 @@ public:
 	*/
 	void sendINFO(const char * wInfo);
 
+	/* pass DTMF (SIP INFO) threw handover chain*/
+	void sendINFO(void* wInfo);
 
 	/** Save a copy of an INVITE or MESSAGE message in the engine. */
 	void saveINVITE(const osip_message_t *INVITE, bool mine);

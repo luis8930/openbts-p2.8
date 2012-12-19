@@ -857,6 +857,11 @@ void TransactionEntry::sendINFO(const char * measurements)
 	mSIP.sendINFO(measurements);
 }
 
+void TransactionEntry::HOCSendINFO(void *element){
+	ScopedLock lock(mLock);
+	mSIP.sendINFO(element);
+}
+
 void TransactionEntry::SIPUser(const char* IMSI)
 {
 	if (mRemoved) throw RemovedTransaction(mID);

@@ -1858,6 +1858,22 @@ void SIPEngine::sendINFO(const char * wInfo)
 	osip_message_free(info);
 };
 
+void SIPEngine::sendINFO(void * wInfo)
+{
+	LOG(INFO) << "user " << mSIPUsername << " state " << mState;
+
+	char tmp[50];
+	make_branch(tmp);
+	mViaBranch = tmp;
+	mCSeq++;
+	osip_message_t * info = sip_info( wInfo,
+		mRemoteUsername.c_str(), mRTPPort, mSIPUsername.c_str(), 
+		mSIPPort, mSIPIP.c_str(), mProxyIP.c_str(), 
+		mMyTag.c_str(), mViaBranch.c_str(), mCallIDHeader, mCSeq); 
+	gSIPInterface.write(&mProxyAddr,info);
+	osip_message_free(info);
+};
+
 osip_message_t* SIPEngine::get_message(){
 	osip_message_t * msg;
 	try {

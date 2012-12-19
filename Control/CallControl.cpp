@@ -748,7 +748,29 @@ void callManagementLoop(TransactionEntry *transaction, GSM::TCHFACCHLogicalChann
 	LOG(INFO) << " call connected " << *transaction;
 	gReports.incr("OpenBTS.GSM.CC.CallMinutes");
 	// poll everything until the call is finished
-	while (!pollInCall(transaction,TCH)) { }
+	while (!pollInCall(transaction,TCH)) {
+	/*
+		TransactionEntry *anchorTransaction = transaction->flipHOLoop();
+		if(anchorTransaction){
+			// since now it is NOT a proxy, and has nothing to do with HO
+			// it should 
+			// 1. remove HO entity in HO thread
+			// 2. unlink (and remove?) corresponding outgoing HO transaction
+			// 3. (?)release SIP for HO part(? - we'll do it downstairs)
+			
+			// so, removing outgoing HO Entity (and outgoing transaction)
+			gBTS.handover().removeByMscTransaction(anchorTransaction);
+			
+			// make a call "normal" again
+			anchorTransaction->backToGSMCall(TCH);
+			
+			// now we can safely terminate HO SIP
+			forceSIPClearing(transaction);
+			gTransactionTable.remove(transaction);
+			return callManagementLoop(anchorTransaction, TCH);
+		}
+	*/
+	}
 	if(! transaction->proxyTransaction() )gTransactionTable.remove(transaction);
 }
 
@@ -1312,6 +1334,16 @@ bool Control::HOProxyUplinkSM(
 		msc->MODSendBYE();
 		osip_message_free(event);
 		return true;
+	}
+	
+	if(MSG_IS_INFO(event)){
+		// dtmf to MSC
+		// need to ACK it with 200 and send further
+		// FIXME: I'm not waiting for 200 any more
+		tail->HOSendOK(event);
+		LOG(ERR) << "handover-proxy relaying DTMF" << event->bodies->node->element;
+		msc->HOCSendINFO(event->bodies->node->element);
+		osip_message_free(event);
 	}
 	
 	LOG(ERR) << "handover proxy uolink: need to relay " << event->sip_method;

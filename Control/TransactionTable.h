@@ -311,6 +311,9 @@ class TransactionEntry {
 	
 	void HOProxy_forward_msg(osip_message_t *event);
 	
+	/* re-transmit SIP INFO threw handover chain*/
+	void HOCSendINFO(void *element);
+	
 	// sending BYE directly to BTS, not to proxy;
 	// signs BYE that just flips the loop
 	void HOSendBYE(bool flip_loop);
@@ -320,6 +323,17 @@ class TransactionEntry {
 	
 	void handoverFailed()
 		{ mHOAllowed = true; }
+	/*
+	// functions to flip handover loops:
+	// set transaction that will replace the current one to continue GSM call
+	void flipHOLoop(TransactionEntry* wAnchorHOTransaction)
+		{ mAnchorHOTransaction = wAnchorHOTransaction; }
+	// check if some transaction must continue GSM call
+	TransactionEntry* flipHOLoop()
+		{ return mAnchorHOTransaction; }
+	// make proxy HO transaction a "normal" one again; SIP loop will be broken outside this function
+	void backToGSMCall(GSM::TCHFACCHLogicalChannel* TCH);
+	*/
 	
 	// These are called by SIPInterface.
 	void saveINVITE(const osip_message_t* invite, bool local)

@@ -1324,6 +1324,73 @@ osip_message_t * SIP::sip_info(const char * measurements, const char *dialed_num
 	return request;	
 }
 
+osip_message_t * SIP::sip_info(void * body, const char *dialed_number, short rtp_port, const char * sip_username, short wlocal_port, const char * local_ip, const char * proxy_ip, const char * from_tag, const char * via_branch, const osip_call_id_t *call_id_header, int cseq) {
+
+	char local_port[10];
+	sprintf(local_port, "%i", wlocal_port);
+
+	osip_message_t * request;
+	osip_message_init(&request);
+	// FIXME -- Should use the "force_update" function.
+	request->message_property = 2;
+	request->sip_method = strdup("INFO");
+	osip_message_set_version(request, strdup("SIP/2.0"));	
+	osip_uri_init(&request->req_uri);
+	osip_uri_set_host(request->req_uri, strdup(proxy_ip));
+	osip_uri_set_username(request->req_uri, strdup(dialed_number));
+	
+	// VIA
+	osip_via_t * via;
+	osip_via_init(&via);
+	via_set_version(via, strdup("2.0"));
+	via_set_protocol(via, strdup("UDP"));
+	via_set_host(via, strdup(local_ip));
+	via_set_port(via, strdup(local_port));
+
+	// VIA BRANCH
+	osip_via_set_branch(via, strdup(via_branch));
+
+	// add via
+	osip_list_add(&request->vias, via, -1);
+
+	// FROM
+	osip_from_init(&request->from);
+	osip_from_set_displayname(request->from, strdup(sip_username));
+
+	// FROM TAG
+	osip_from_set_tag(request->from, strdup(from_tag));
+
+	osip_uri_init(&request->from->url);
+	osip_uri_set_host(request->from->url, strdup(proxy_ip));
+	osip_uri_set_username(request->from->url, strdup(sip_username));
+
+	// TO
+	osip_to_init(&request->to);
+	osip_to_set_displayname(request->to, strdup(""));
+	osip_uri_init(&request->to->url);
+	osip_uri_set_host(request->to->url, strdup(proxy_ip));
+	osip_uri_set_username(request->to->url, strdup(dialed_number));
+
+	// CALL ID
+	osip_call_id_clone(call_id_header, &request->call_id);
+
+	// CSEQ
+	osip_cseq_init(&request->cseq);
+	osip_cseq_set_method(request->cseq, strdup("INFO"));
+	char temp_buf[21];
+	sprintf(temp_buf,"%i",cseq);
+	osip_cseq_set_number(request->cseq, strdup(temp_buf));	
+
+	sip_message_set_content_type(request, strdup("application/dtmf-relay"));
+	//osip_message_set_content_length(request, strdup(temp_buf));
+
+	// Payload.
+	//osip_message_set_body(request,message,strlen(message));
+        osip_message_set_body(request,(char*)body,strlen((char*)body));
+
+	return request;	
+}
+
 osip_message_t * SIP::sip_proceeding( osip_message_t * invite, const char * sip_username, const char *local_ip, short  port, const char * body) {
 
 	osip_message_t * proceeding;
