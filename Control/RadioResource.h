@@ -43,6 +43,7 @@ class L3PhysicalInformation;
 class L3HandoverComplete;
 class L3HandoverFailure;
 class L3MobileIdentity;
+class L3MeasurementResults;
 class Z100Timer;
 };
 
@@ -174,10 +175,7 @@ typedef std::list<OutgoingHandover> OutgoingHandoverList;
 
 class Handover{
 	public:
-		
-		Handover()
-		:mRunning(false), mT3105(gConfig.getNum("GSM.Handover.T3105")), mHandoverReference(1)
-		{}
+		Handover();
 		
 		void start();
 		
@@ -198,6 +196,12 @@ class Handover{
 		void showOutgoingHandovers();
 		
 		void dump(std::ostream&) const;
+		
+		
+		/* as an option, handover decision can be taken locally.
+		* If target site refuses, initial call is not disturbed in any way */
+		void BTSDecision(Control::TransactionEntry *transaction, GSM::L3MeasurementResults wMeasurementResults);
+	
 	private:
 		unsigned allocateHandoverReference();
 
@@ -216,6 +220,17 @@ class Handover{
 		friend void *HandoverServiceLoop(Handover *);
 	
 		void handoverHandler();
+		
+		
+		
+		
+		/* stuff needed to take a decision locally */
+			/* a permission to take a decision locally, based on MS measurements */
+			bool mBTSDesicion;
+			
+			/* must follow the order of ARFCNs in GSM.CellSelection.Neighbors */
+			std::vector <std::string> mNeighborAddresses;
+		
 };
 
 void *HandoverServiceLoop(Handover *);

@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <list>
+#include <fstream>
 
 #include "ControlCommon.h"
 #include "TransactionTable.h"
@@ -48,6 +49,7 @@
 #include <Reporting.h>
 #include <Logger.h>
 #include <osipparser2/osip_message.h>
+#include <streambuf>
 #undef WARNING
 
 
@@ -563,7 +565,70 @@ void Pager::dump(ostream& os) const
 }
 
 
+Handover::Handover(){
+	mRunning = false;
+	mT3105 = gConfig.getNum("GSM.Handover.T3105");
+	mHandoverReference = 1;
 
+	/* preparing stuff to take decision locally */
+	mBTSDesicion = false;
+	
+	std::vector <unsigned> arfcnseq = gConfig.getVector("GSM.CellSelection.Neighbors");
+	
+	mNeighborAddresses.resize(arfcnseq.size());
+	
+	std::string addr;
+	unsigned arfcn;
+	ifstream inFile;
+	inFile.open(gConfig.getStr("GSM.Handover.BTS.NeighborsFilename").c_str(), ios::in);
+	if(!inFile){
+		LOG(ERR) << "no file with Neighbor ip-ARFCN pairs";
+		return;
+	}
+	while(inFile >> arfcn >> addr){
+		std::cout << "looking position for" << arfcn << '\n';
+		for(int i=0;i<arfcnseq.size() && (i<6);i++)
+			if(arfcnseq[i] == arfcn) {
+				mBTSDesicion = true;
+				mNeighborAddresses[i] = addr;
+			}
+	}
+	inFile.close();
+	
+	for(int i=0;i<mNeighborAddresses.size();i++){
+		LOG(ERR) << "ARFCN=" << arfcnseq[i] << " -> " << mNeighborAddresses[i].c_str();
+	}
+}
+
+void Handover::BTSDecision(Control::TransactionEntry* transaction, GSM::L3MeasurementResults wMeasurementResults){
+	if(mBTSDesicion && gConfig.getNum("GSM.Handover.BTS.Enable")) {
+		if(wMeasurementResults.NO_NCELL() == 0) {
+			LOG(ERR) << "handover BTS decision: no useful data: " << wMeasurementResults;
+			return;
+		}
+		
+		//LOG(ERR) << "handover BTS decision: preparing to average";
+		GSM::L3MeasurementResults averaged = transaction->average(wMeasurementResults,atof(gConfig.getStr("GSM.Handover.BTS.Weights").c_str()));
+		
+		if(! transaction->handoverAllowed()) return;
+		
+		LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", serving (dBm) : " << averaged.RXLEV_FULL_SERVING_CELL_dBm();
+		int max,index,diff;
+		for(int i=0, index=max=0;i<averaged.NO_NCELL();i++){
+			diff = averaged.RXLEV_NCELL_dBm(i) - averaged.RXLEV_FULL_SERVING_CELL_dBm();
+			LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", neighbor #" << (i+1) << "/"<< averaged.NO_NCELL() << ", delta=" << diff << "dB";
+			if(diff>max) { max = diff, index = i; }
+		}
+		
+		if(max > gConfig.getNum("GSM.Handover.BTS.Hysteresis")) {
+			LOG(ERR) << "triggering " << transaction->subscriber() << "BTS index: " << index << " addr=" << mNeighborAddresses[index];
+		}
+	}
+	else {
+		// I think need to forward measurement results to a core network element
+		LOG(ERR) << "handover decision at BTS is prohibited";
+	}
+}
 
 HandoverEntry::HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogicalChannel* wTCH, unsigned wHandoverReference, const char *wCallID)
 	:mTransaction(wTransaction), mTCH(wTCH), mHandoverReference(wHandoverReference), mCallID(wCallID),

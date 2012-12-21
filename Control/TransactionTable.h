@@ -1,11 +1,9 @@
 /**@file Declarations for TransactionTable and related classes. */
 /*
-<<<<<<< HEAD
 * Copyright 2010 Kestrel Signal Processing, Inc.
 * Copyright 2011, 2012 Range Networks, Inc.
 * Copyright 2008-2011 Free Software Foundation, Inc.
-d * Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
->>>>>>> handover target implemented, tests needed
+* Copyright 2012 Fairwaves LLC, Dmitri Soloviev <dmi3sol@gmail.com>
 *
 * This use of this software may be subject to additional restrictions.
 * See the LEGAL file in the main directory for details.
@@ -42,6 +40,8 @@ namespace GSM {
 class LogicalChnanel;
 class SACCHLogicalChannel;
 }
+
+#include "RadioResource.h"
 
 
 
@@ -323,6 +323,13 @@ class TransactionEntry {
 	
 	void handoverFailed()
 		{ mHOAllowed = true; }
+	
+	bool handoverAllowed()
+		{ return mHOAllowed; }
+	
+	// FIXME: low pass filtering must be implemented
+	GSM::L3MeasurementResults average(GSM::L3MeasurementResults wMeasurementResults, double wWeights)
+		{ return wMeasurementResults; }
 	/*
 	// functions to flip handover loops:
 	// set transaction that will replace the current one to continue GSM call

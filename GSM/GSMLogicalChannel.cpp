@@ -270,6 +270,14 @@ void SACCHLogicalChannel::serviceLoop()
 				L3MeasurementReport* measurement = dynamic_cast<L3MeasurementReport*>(rrMessage);
 				if (measurement) {
 					mMeasurementResults = measurement->results();
+					
+					// ATTENTION: 1 means "invalid"
+					// FIXME: it might be useful to change decoding
+					if(mMeasurementResults.MEAS_VALID()){
+						LOG(ERR) << "invalid measurement report" << mMeasurementResults;
+						delete rrMessage;
+						continue;
+					}
 					OBJLOG(DEBUG) << "SACCH measurement report " << mMeasurementResults;
 					// Add the measurement results to the table
 					// Note that the typeAndOffset of a SACCH match the host channel.
@@ -284,11 +292,12 @@ void SACCHLogicalChannel::serviceLoop()
 						Control::TransactionEntry *transaction = gTransactionTable.find(chan);
 
 						if(transaction) {
-									std::ostringstream strm;									
-									mMeasurementResults.text(strm);
-									std::string str =  strm.str();
+							gBTS.handover().BTSDecision(transaction, mMeasurementResults);
+							//		std::ostringstream strm;
+							//		mMeasurementResults.text(strm);
+							//		std::string str =  strm.str();
 									
-									//transaction->sendINFO(str.c_str());
+							//		transaction->sendINFO(str.c_str());
 							
 						}
 //						else {
