@@ -622,6 +622,7 @@ void Handover::BTSDecision(Control::TransactionEntry* transaction, GSM::L3Measur
 		
 		if(max > gConfig.getNum("GSM.Handover.BTS.Hysteresis")) {
 			LOG(ERR) << "triggering " << transaction->subscriber() << "BTS index: " << index << " addr=" << mNeighborAddresses[index];
+			performHandover(transaction->subscriber(),mNeighborAddresses[index]);
 		}
 	}
 	else {
