@@ -639,7 +639,7 @@ HandoverEntry::HandoverEntry(TransactionEntry* wTransaction, GSM::TCHFACCHLogica
 
 	status("handover entry constructor");
 	
-	gTRX.ARFCN()->handoverOn(mTCH->TN(),mHandoverReference);	
+	gTRX.ARFCN(0)->handoverOn(mTCH->TN(),mHandoverReference);	
 	mNy1 = gConfig.getNum("GSM.Handover.Ny1");
 	mT3103 = Z100Timer(gConfig.getNum("GSM.Handover.T3103"));
 	mT3103.set();	// Limit transaction lifetime
@@ -654,7 +654,7 @@ void HandoverEntry::HandoverAccessDetected(int wInitialTA){
 	
 	mInitialTA = wInitialTA;
 	
-	gTRX.ARFCN()->handoverOff(mTCH->TN());
+	gTRX.ARFCN(0)->handoverOff(mTCH->TN());
 	mGotHA = true;
 	
 	mPhysicalInfoAttempts = 0;
@@ -735,7 +735,7 @@ bool HandoverEntry::removeHandoverEntry(){
 				mHandoverReference <<
 				", gotHA=" << mGotHA << ", gotHC=" << mGotHComplete <<
 				" TA=" <<  mInitialTA << ", sent=" << mPhysicalInfoAttempts;
-			gTRX.ARFCN()->handoverOff(mTCH->TN());
+			gTRX.ARFCN(0)->handoverOff(mTCH->TN());
 			// FIXME is it worth doing anything??
 			// originating party does not need it
 			mTransaction->HOCTimeout();
@@ -745,7 +745,7 @@ bool HandoverEntry::removeHandoverEntry(){
 		}
 	if(mRegisterPerformed) {
 		LOG(WARNING) << "removing handover entry: SIP Register performed, nothing to do, ref=" << mHandoverReference;
-		gTRX.ARFCN()->handoverOff(mTCH->TN());	// this will spoil nothing..
+		gTRX.ARFCN(0)->handoverOff(mTCH->TN());	// this will spoil nothing..
 		return true;
 	}
 	if(mT3103.expired() && (!mGotHComplete)){
@@ -754,7 +754,7 @@ bool HandoverEntry::removeHandoverEntry(){
 			", gotHA=" << mGotHA << ", gotHC=" << mGotHComplete <<
 			" TA=" <<  mInitialTA << ", sent=" << mPhysicalInfoAttempts;
 		
-		gTRX.ARFCN()->handoverOff(mTCH->TN());
+		gTRX.ARFCN(0)->handoverOff(mTCH->TN());
 		// FIXME is it worth doing anything??
 		// originating party does not need it
 		mTransaction->HOCTimeout();

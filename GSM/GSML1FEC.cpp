@@ -1074,7 +1074,7 @@ void TCHFACCHL1Decoder::writeLowSide(const RxBurst& inBurst)
 	OBJLOG(INFO) << "TCHFACCHL1Decoder " << inBurst;
 	// If the channel is closed, ignore the burst.
 	if (!active()) {
-             if(gTRX.ARFCN()->handover(TN()) )        // just for evaluating; it might be reasonable to activate TCH for handover
+             if(gTRX.ARFCN(0)->handover(TN()) )        // just for evaluating; it might be reasonable to activate TCH for handover
                  processBurst(inBurst);
              else
 		OBJLOG(DEBUG) << "TCHFACCHL1Decoder not active, ignoring input, tn=" << TN();
@@ -1097,13 +1097,13 @@ bool TCHFACCHL1Decoder::processBurst( const RxBurst& inBurst)
 	// the interleaver or accepting bad parameters.
 
 	//OBJLOG(ERR) << "burst at tn=" << TN();
-	if(gTRX.ARFCN()->handover( TN() )){
+	if(gTRX.ARFCN(0)->handover( TN() )){
 		OBJLOG(DEBUG) << "Trying to decode as Access Burst, same TN()";
 		
 		unsigned HR;
 		if(decodeRACHBurst(inBurst, mParityHA, mUHA, mDHA, HR)){
 			OBJLOG(DEBUG) <<"handover Access Detected at "<< TN() <<", HandoverReference=" << HR <<"\n";
-			if(HR == gTRX.ARFCN()->getHandoverReference( TN() )){
+			if(HR == gTRX.ARFCN(0)->getHandoverReference( TN() )){
 				OBJLOG(DEBUG) <<"handover Reference ok.. " << HR << "\n";
 				
 				int initialTA = (int)(inBurst.timingError() + 0.5F);

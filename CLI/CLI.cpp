@@ -795,30 +795,19 @@ int stats(int argc, char** argv, ostream& os)
 	return SUCCESS;
 }
 
-int handover(int argc, char** argv, ostream& os, istream& is)
+int handover(int argc, char** argv, ostream& os)
 {
 	if (argc!=2) return BAD_NUM_ARGS;
-/*
-	os << endl << "Active transactions before handover attempt" << endl;	
-	size_t count = gTransactionTable.dump(os);
-	os << endl << count << " transactions in table" << endl;
-*/
+
 	GSM::L3MobileIdentity mobileID(argv[1]);
 	string whichBTS = gConfig.getStr("GSM.Handover.Debug.NeighbourIp");
 	
 	gBTS.handover().performHandover(mobileID, whichBTS);
 	
-//	sleep(3);
-//	gBTS.handover().showOutgoingHandovers();
-/*	
-	os << endl << "Active transactions after handover attempt" << endl;	
-	count = gTransactionTable.dump(os);
-	os << endl << count << " transactions in table" << endl;
-*/	
 	return SUCCESS;
 }
 
-int status(int argc, char** argv, ostream& os, istream& is)
+int status(int argc, char** argv, ostream& os)
 {
 	gTransactionTable.dump(os);
 	

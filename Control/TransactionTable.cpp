@@ -1247,15 +1247,12 @@ TransactionEntry* TransactionTable::find(GSM::TypeAndOffset desc)
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
 		if (itr->second->deadOrRemoved()) continue;
 		const GSM::LogicalChannel* thisChan = itr->second->channel();
-
+		
+		// if HO - no valid channel
+		if(thisChan == NULL)	continue;
+		
 		if (thisChan->typeAndOffset()!=desc) continue;
 		return itr->second;
-
-		const GSM::LogicalChannel* thisChan = itr->second->channel();
-		if(thisChan == NULL)	continue;
-		//LOG(DEBUG) << "looking for " << *chan << " (" << chan << ")" << ", found " << *(thisChan) << " (" << thisChan << ")";
-
-		if( strcmp(thisChan->descriptiveString(),chan->descriptiveString()) == 0 ) return itr->second;
 	}
 	//LOG(DEBUG) << "no match for " << *chan << " (" << chan << ")";
 	return NULL;
