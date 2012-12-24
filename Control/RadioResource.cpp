@@ -608,21 +608,23 @@ void Handover::BTSDecision(Control::TransactionEntry* transaction, GSM::L3Measur
 		}
 		
 		//LOG(ERR) << "handover BTS decision: preparing to average";
-		GSM::L3MeasurementResults averaged = transaction->average(wMeasurementResults,atof(gConfig.getStr("GSM.Handover.BTS.Weights").c_str()));
+		vector <int> averaged = transaction->average(wMeasurementResults,atof(gConfig.getStr("GSM.Handover.BTS.Weights").c_str()));
 		
 		if(! transaction->handoverAllowed()) return;
 		
-		LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", serving (dBm) : " << averaged.RXLEV_FULL_SERVING_CELL_dBm();
+		LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", serving (dBm) : " << averaged[6];
 		int max,index,diff;
-		for(int i=0, index=max=0;i<averaged.NO_NCELL();i++){
-			diff = averaged.RXLEV_NCELL_dBm(i) - averaged.RXLEV_FULL_SERVING_CELL_dBm();
-			LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", neighbor #" << (i+1) << "/"<< averaged.NO_NCELL() << ", delta=" << diff << "dB";
+		for(int i=0, index=max=0;i<wMeasurementResults.NO_NCELL();i++){
+			diff = averaged[i] - averaged[6];
+			LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", neighbor #" << (i+1) << "/"<< wMeasurementResults.NO_NCELL() << ", delta=" << diff << "dB";
 			if(diff>max) { max = diff, index = i; }
 		}
 		
 		if(max > gConfig.getNum("GSM.Handover.BTS.Hysteresis")) {
 			LOG(ERR) << "triggering " << transaction->subscriber() << "BTS index: " << index << " addr=" << mNeighborAddresses[index];
 			performHandover(transaction->subscriber(),mNeighborAddresses[index]);
+			// permit changing a favorite
+			transaction->resetMeasurement(index);
 		}
 	}
 	else {

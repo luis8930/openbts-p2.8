@@ -104,6 +104,7 @@ TransactionEntry::TransactionEntry(
 	GSM::CallState wState,
 	const char *wMessage)
 	:mProxyTransaction(false),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
 	mL3TI(gTMSITable.nextL3TI(wSubscriber.digits())),
@@ -1585,4 +1586,15 @@ void TransactionEntry::HOSendBYE(bool flip_loop){
 	LOG(ERR) << "handover: flipping loops not implemented yet";
 }
 
+vector <int> TransactionEntry::average(GSM::L3MeasurementResults wMeasurementResults, double wWeights){
+	for(int i=0;i<wMeasurementResults.NO_NCELL();i++){
+		mAveragedMeasurements[i] = 
+			(int)((double)(wMeasurementResults.RXLEV_NCELL_dBm(i)*wWeights + (1-wWeights)*mAveragedMeasurements[i]));
+	}
+	
+	mAveragedMeasurements[6] = 
+			(int)((double)(wMeasurementResults.RXLEV_FULL_SERVING_CELL_dBm()*wWeights + (1-wWeights)*mAveragedMeasurements[6]));
+	
+	return mAveragedMeasurements;
+}
 // vim: ts=4 sw=4

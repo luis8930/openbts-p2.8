@@ -66,6 +66,8 @@ typedef std::map<std::string, GSM::Z100Timer> TimerTable;
 class TransactionEntry {
 
 	private:
+	
+#define MinimalMeasuredValue	-110
 
 	mutable Mutex mLock;					///< thread-safe control, shared from gTransactionTable
 
@@ -105,6 +107,8 @@ class TransactionEntry {
 	bool mHOAllowed;	// to prevent from several handover attempts for a single call
 
 	volatile bool mRemoved;			///< true if ready for removal
+
+	std::vector <int> mAveragedMeasurements;
 
 	public:
 
@@ -328,8 +332,10 @@ class TransactionEntry {
 		{ return mHOAllowed; }
 	
 	// FIXME: low pass filtering must be implemented
-	GSM::L3MeasurementResults average(GSM::L3MeasurementResults wMeasurementResults, double wWeights)
-		{ return wMeasurementResults; }
+	vector <int> average(GSM::L3MeasurementResults wMeasurementResults, double wWeights);
+	
+	void resetMeasurement(unsigned index)
+		{ mAveragedMeasurements[index] = MinimalMeasuredValue; }
 	/*
 	// functions to flip handover loops:
 	// set transaction that will replace the current one to continue GSM call
