@@ -289,8 +289,9 @@ void SACCHLogicalChannel::serviceLoop()
 //						LOG(WARNING) << descriptiveString();
 						const GSM::LogicalChannel * chan = this;
 						
+						OBJLOG(ERR) << "SACCH measurement report: looking 4 transaction ";
 						Control::TransactionEntry *transaction = gTransactionTable.find(chan);
-
+						OBJLOG(ERR) << "SACCH measurement report: transaction found";
 						if(transaction) {
 							gBTS.handover().BTSDecision(transaction, mMeasurementResults);
 							//		std::ostringstream strm;

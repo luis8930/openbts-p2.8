@@ -103,7 +103,7 @@ TransactionEntry::TransactionEntry(
 	const L3CallingPartyBCDNumber& wCalling,
 	GSM::CallState wState,
 	const char *wMessage)
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
@@ -129,7 +129,8 @@ TransactionEntry::TransactionEntry(
 	const L3CMServiceType& wService,
 	unsigned wL3TI,
 	const L3CalledPartyBCDNumber& wCalled)
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
 	mL3TI(wL3TI),
@@ -154,7 +155,8 @@ TransactionEntry::TransactionEntry(
 	GSM::LogicalChannel* wChannel,
 	const L3CMServiceType& wService,
 	unsigned wL3TI)
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
 	mL3TI(wL3TI),
@@ -177,7 +179,8 @@ TransactionEntry::TransactionEntry(
 	GSM::LogicalChannel* wChannel,
 	const L3CalledPartyBCDNumber& wCalled,
 	const char* wMessage)
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),
 	mService(GSM::L3CMServiceType::ShortMessage),
@@ -200,7 +203,8 @@ TransactionEntry::TransactionEntry(
 	const char* proxy,
 	const L3MobileIdentity& wSubscriber,
 	GSM::LogicalChannel* wChannel)
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),
 	mService(GSM::L3CMServiceType::ShortMessage),
@@ -922,7 +926,8 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	unsigned wL3TI,
 	const GSM::L3CMServiceType& wService)
 
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mL3TI(wL3TI),
 	mSubscriber(wSubscriber),
@@ -941,7 +946,8 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	const GSM::L3MobileIdentity& wSubscriber,
 	string whichBTS,
 	unsigned wL3TI, string wDRTPIp, short wDRTPPort, unsigned wCodec)
-	:mProxyTransaction(false),
+	:mProxyTransaction(false),mHOAllowed(true),
+	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mOldTransaction(wOldTransaction),
 	mSubscriber(wSubscriber),
 	mL3TI(wOldTransaction->L3TI()),
@@ -1180,10 +1186,10 @@ void TransactionTable::clearDeadEntries()
 
 
 
-
+/*
 TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 {
-	LOG(DEBUG) << "by channel: " << *chan << " (" << chan << ")";
+	LOG(ERR) << "by channel: " << *chan << " (" << chan << ")";
 
 	ScopedLock lock(mLock);
 
@@ -1202,6 +1208,26 @@ TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 	}
 	//LOG(DEBUG) << "no match for " << *chan << " (" << chan << ")";
 	return retVal;
+}
+*/
+TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
+{
+	LOG(DEBUG) << "by channel: " << *chan << " (" << chan << ")";
+
+	// Yes, it's linear time.
+	// Since clearDeadEntries is also linear, do that here, too.
+	clearDeadEntries();
+
+	// Brute force search.
+	ScopedLock lock(mLock);
+	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
+		const GSM::LogicalChannel* thisChan = itr->second->channel();
+		if(thisChan == NULL)	continue;
+		//LOG(DEBUG) << "looking for " << *chan << " (" << chan << ")" << ", found " << *(thisChan) << " (" << thisChan << ")";
+		if( strcmp(thisChan->descriptiveString(),chan->descriptiveString()) == 0 ) return itr->second;
+	}
+	//LOG(DEBUG) << "no match for " << *chan << " (" << chan << ")";
+	return NULL;
 }
 
 
@@ -1584,6 +1610,14 @@ void TransactionEntry::HOSendBYE(bool flip_loop){
 }
 
 vector <int> TransactionEntry::average(GSM::L3MeasurementResults wMeasurementResults, double wWeights){
+	/*LOG(ERR) << "meas 1, No=" << wMeasurementResults.NO_NCELL();
+	for(int i=0;i<wMeasurementResults.NO_NCELL();i++){
+		mAveragedMeasurements[i] = wMeasurementResults.RXLEV_NCELL_dBm(i);
+	}
+	LOG(ERR) << "meas 2";
+	mAveragedMeasurements[6] = wMeasurementResults.RXLEV_FULL_SERVING_CELL_dBm();
+*/
+
 	for(int i=0;i<wMeasurementResults.NO_NCELL();i++){
 		mAveragedMeasurements[i] = 
 			(int)((double)(wMeasurementResults.RXLEV_NCELL_dBm(i)*wWeights + (1-wWeights)*mAveragedMeasurements[i]));
@@ -1591,6 +1625,8 @@ vector <int> TransactionEntry::average(GSM::L3MeasurementResults wMeasurementRes
 	
 	mAveragedMeasurements[6] = 
 			(int)((double)(wMeasurementResults.RXLEV_FULL_SERVING_CELL_dBm()*wWeights + (1-wWeights)*mAveragedMeasurements[6]));
+
+	
 	
 	return mAveragedMeasurements;
 }
