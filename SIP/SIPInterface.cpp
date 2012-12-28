@@ -452,20 +452,31 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 		return true;
 	}
 */	
+	cout << "handover invte detected, imsi=" << IMSI << ", callid=" << callIDNum << "\n";
+	size_t count = gTransactionTable.dump(cout);
+	cout << "---------------";
+	
+
 	L3MobileIdentity mobileID(IMSI);
 	TransactionEntry* transaction= gTransactionTable.find(mobileID,callIDNum);
 		// There's a FIFO but no trasnaction record?
 		if (transaction) {
-			LOG(ERR) << "handover debug: need to fetch ip:port&codec and relay re-invite";
-			char ip[20], port_str[10];
-			short port;
-			unsigned codec;
-		
-			transaction->reinviteTarget(msg, ip, port_str, &codec);
-			port = atoi(port_str);
-			transaction->HOSendOK(msg);
-			transaction->callingTransaction()->HOSendREINVITE(ip, port, codec);
-			return true;
+			if(transaction->service() != GSM::L3CMServiceType::HandoverOriginatedCall){
+				cout << "handover invte detected, transaction (1) found" << *transaction;
+
+				LOG(ERR) << gConfig.getStr("GSM.Radio.C0") << " handover debug (transaction found): need to fetch ip:port&codec and relay re-invite";
+				LOG(ERR) << gConfig.getStr("GSM.Radio.C0") <<  "handover debug (transaction found), proxying: " << transaction->proxyTransaction() ;
+				char ip[20], port_str[10];
+				short port;
+				unsigned codec;
+
+				transaction->reinviteTarget(msg, ip, port_str, &codec);
+				port = atoi(port_str);
+				transaction->HOSendOK(msg);
+				transaction->callingTransaction()->HOSendREINVITE(ip, port, codec);
+				return true;
+			}
+			LOG(ERR) << "a copy of handover incite";
 		}
 	// this fuction will
 	// - allocate channel
