@@ -283,27 +283,14 @@ void SACCHLogicalChannel::serviceLoop()
 					// Note that the typeAndOffset of a SACCH match the host channel.
 					
 					if(this){
-						//ScopedLock lock(mLock);
-
-//						const char* chanString = descriptiveString();
-//						LOG(WARNING) << descriptiveString();
 						const GSM::LogicalChannel * chan = this;
 						
-						OBJLOG(ERR) << "SACCH measurement report: looking 4 transaction ";
+//						OBJLOG(ERR) << "SACCH measurement report: looking 4 transaction ";
 						Control::TransactionEntry *transaction = gTransactionTable.find(chan);
-						OBJLOG(ERR) << "SACCH measurement report: transaction found";
+//						OBJLOG(ERR) << "SACCH measurement report: transaction found";
 						if(transaction) {
-							gBTS.handover().BTSDecision(transaction, mMeasurementResults);
-							//		std::ostringstream strm;
-							//		mMeasurementResults.text(strm);
-							//		std::string str =  strm.str();
-									
-							//		transaction->sendINFO(str.c_str());
-							
+							gBTS.handover().BTSDecision(transaction, mMeasurementResults);							
 						}
-//						else {
-//							OBJLOG(WARNING) << chanString << " Measurement w/o transaction";
-//						}
 					}
 					gPhysStatus.setPhysical(this, mMeasurementResults);
 				} else {

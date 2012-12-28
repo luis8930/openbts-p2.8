@@ -969,7 +969,7 @@ SIPEngine::SIPEngine(const char* proxy, const char* IMSI, unsigned wL3TI, string
 	mSIPPort(gConfig.getNum("SIP.Local.Port")),
 	mSIPIP(gConfig.getStr("SIP.Local.IP")),
 	mINVITE(NULL), mLastResponse(NULL), mBYE(NULL),
-	mCANCEL(NULL), mSession(NULL), mTxTime(0), mRxTime(0),
+	mCANCEL(NULL), mERROR(NULL), mSession(NULL), mTxTime(0), mRxTime(0),
 	mState(NullState),
 	mDTMF('\0'),mDTMFDuration(0),
 	mDRTPPort(wDestRTP), mCodec(wCodec)

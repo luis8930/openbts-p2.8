@@ -351,7 +351,7 @@ bool TransactionEntry::dead() const
 	// Dead if someone requested removal >3 min ago.
 	if (mRemoved) return true;
 	// Any GSM state other than Active for >3 min?
-	if (lGSMState!=GSM::Active) return true;
+	if ((lGSMState!=GSM::Active) && (!mProxyTransaction)) return true;
 	// Any SIP stte other than active for >3 min?
 	if (lSIPState !=SIP::Active) return true;
 	
@@ -935,7 +935,9 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	mService(wService),
 	mChannel(wChannel),
 	mGSMState(GSM::HOListening),
-	mTerminationRequested(false)
+	mTerminationRequested(false),
+	mRemoved(false),
+	mNumSQLTries(gConfig.getNum("Control.NumSQLTries"))
 {
 	LOG(INFO) << "starting transaction for handover, " << mChannel;
 	initTimers();
@@ -959,10 +961,11 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	mGSMState(GSM::NullState),
 	mNumSQLTries(gConfig.getNum("Control.NumSQLTries")),
 	mChannel(NULL),
-	mTerminationRequested(false)
+	mTerminationRequested(false),
+	mRemoved(false)
 
 {
-	LOG(ERR) << "\"temporary\" transaction for outgoing handover, created";
+	LOG(DEBUG) << "\"temporary\" transaction for outgoing handover, created";
 	
 	HOSendINVITE(whichBTS);
 	// FIXME timers are not needed here..
@@ -1221,6 +1224,7 @@ TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 	// Brute force search.
 	ScopedLock lock(mLock);
 	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
+		if (itr->second->deadOrRemoved()) continue;
 		const GSM::LogicalChannel* thisChan = itr->second->channel();
 		if(thisChan == NULL)	continue;
 		//LOG(DEBUG) << "looking for " << *chan << " (" << chan << ")" << ", found " << *(thisChan) << " (" << thisChan << ")";
