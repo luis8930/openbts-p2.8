@@ -156,9 +156,16 @@ class OutgoingHandover{
 		bool isFinished();
 		
 		const char *status() const;
+		
+		TransactionEntry * getMscTransaction()
+			{ return mTransactionMSC; }
+		
+		void destroyTail()
+			{ mDestroyTail = true; }
 	private:
 		GSM::Z100Timer mT3103;
 		
+		bool mDestroyTail;
 		//bool mProxy;
 		
 		// to interface the switch
@@ -180,7 +187,7 @@ class Handover{
 		void start();
 		
 		/** request to accommodate a handover */
-		bool addHandover(const char* CallID, const char* IMSI, unsigned l3ti, const char* callerHost, void* msg);
+		bool addHandover(const char* CallID, const char* IMSI, unsigned l3ti, const char* callerHost, void* msg, TransactionEntry* existingTransaction);
 		/** got RACH with Handover Access */
 		void handoverAccess(unsigned wTN, int initialTA);
 		/** got Handover Complete at DCCH */
@@ -201,6 +208,8 @@ class Handover{
 		/* as an option, handover decision can be taken locally.
 		* If target site refuses, initial call is not disturbed in any way */
 		void BTSDecision(Control::TransactionEntry *transaction, GSM::L3MeasurementResults wMeasurementResults);
+		
+		void removeProxy(Control::TransactionEntry *mscTransaction);
 	
 	private:
 		unsigned allocateHandoverReference();

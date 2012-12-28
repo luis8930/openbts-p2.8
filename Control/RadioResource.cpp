@@ -382,13 +382,29 @@ void Control::HandoverCompleteHandler(const GSM::L3HandoverComplete *confirm, GS
 		LOG(ERR) << "unable to resolve transaction for handover complete";
 		return;
 	}
+	
 	unsigned rtpPort = allocateRTPPorts();	
 	
 	gBTS.handover().handoverComplete(DCCH->TN());
 	// TODO: ensure that mInvite is stored!
 
-	transaction->HOCSendOK(rtpPort, SIP::RTPGSM610);
-
+	TransactionEntry* existingTransaction = transaction->existingTransaction();
+	if( existingTransaction==NULL ){
+		// a handover with a new IMSI
+		transaction->HOCSendOK(rtpPort, SIP::RTPGSM610);
+	}
+	else{
+		LOG(ERR) << "flipping handover loop";
+		transaction->HOCTimeout();
+		transaction = existingTransaction;
+		char ip[20];
+		strcpy(ip,gConfig.getStr("SIP.Local.IP").c_str());
+		transaction->HOSendREINVITE(ip ,rtpPort, SIP::RTPGSM610);
+		// remove "proxy" flag
+		// send bye to the tail
+		transaction->cutHandoverTail(DCCH);
+	}
+	
 	gBTS.handover().showHandovers();			
 
 	transaction->MTCInitRTP();	// ea obtain peers' rtp from mInvite
@@ -892,7 +908,7 @@ void Handover::showHandovers(){
 }
 
 
-bool Handover::addHandover(const char* callID, const char* IMSI, unsigned l3ti, const char* callerHost, void* msg){
+bool Handover::addHandover(const char* callID, const char* IMSI, unsigned l3ti, const char* callerHost, void* msg, TransactionEntry* existingTransaction){
 	
 	L3MobileIdentity mobileID(IMSI);
 
@@ -927,7 +943,7 @@ bool Handover::addHandover(const char* callID, const char* IMSI, unsigned l3ti, 
 		mobileID,
 		TCH,
 		l3ti,
-		GSM::L3CMServiceType::HandoverOriginatedCall);
+		GSM::L3CMServiceType::HandoverOriginatedCall,existingTransaction);
 	
 	// handover transaction has callerNumber==calledNumber
 	transaction->SIPUser(callID,IMSI,IMSI,callerHost);
@@ -1013,13 +1029,35 @@ void Handover::dump(ostream& os) const{
 }
 
 OutgoingHandover::OutgoingHandover(TransactionEntry* wTransaction)
-	:mTransactionHO(wTransaction){
+	:mTransactionHO(wTransaction),mDestroyTail(false){
 	
 	mT3103 = Z100Timer(gConfig.getNum("GSM.Handover.T3103"));
 	mT3103.set();
 }
 
+void Handover::removeProxy(Control::TransactionEntry *mscTransaction){
+	// first find outgoing HO entity
+	for (OutgoingHandoverList::iterator lp = mOutgoingHandovers.begin(); lp != mOutgoingHandovers.end(); lp++) {
+		if(lp->getMscTransaction() == mscTransaction) { 
+			// send BYE to the tail
+			// remove tail
+			// remove entity
+			lp->destroyTail();
+			return;
+		}
+	}
+	
+}
+
 bool OutgoingHandover::isFinished(){
+	
+	if(mDestroyTail) {
+		LOG(ERR) << "removing outgoing handover proxy";
+		mTransactionHO->MODSendBYE();
+		gSIPInterface.removeCall(mTransactionHO->SIPCallID());
+		gTransactionTable.remove(mTransactionHO);
+		return true;
+	}
 	
 	osip_message_t *msg;
 	bool term = false;

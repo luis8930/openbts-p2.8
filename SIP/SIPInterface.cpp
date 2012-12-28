@@ -485,8 +485,16 @@ bool SIPInterface::checkInviteHOC(osip_message_t* msg){
 	// - create handoverEntry and place it
 	// - link transaction and handover entry
 	// - send Ack (ea Proceeding
+	LOG(ERR) << gConfig.getStr("GSM.Radio.C0") << " handover debug (transaction NOT found): new handover invite";
+	transaction= gTransactionTable.findLegacyTransaction(mobileID);
+	if(transaction) {
+		cout << "handover invte detected, transaction (2) found" << *transaction;
+	
+		LOG(ERR) << gConfig.getStr("GSM.Radio.C0") << " handover debug: .. but IMSI is known" << mobileID;
+	}
+			
 	addCall(callIDNum);
-	gBTS.handover().addHandover(callIDNum,IMSI,l3ti,callerHostAndIp,msg);
+	gBTS.handover().addHandover(callIDNum,IMSI,l3ti,callerHostAndIp,msg,transaction);
 		
 
 

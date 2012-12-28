@@ -93,6 +93,10 @@ class TransactionEntry {
 	GSM::CallState mGSMState;				///< the GSM/ISDN/Q.931 call state
 	Timeval mStateTimer;					///< timestamp of last state change.
 	TimerTable mTimers;						///< table of Z100-type state timers
+	
+	// if there is a handover attempt, while IMSI is known here already
+	// this means loop must be removed after ho succeeds
+	TransactionEntry * mExistingTransaction;
 
 	unsigned mNumSQLTries;					///< number of SQL tries for DB operations
 
@@ -153,7 +157,7 @@ class TransactionEntry {
 		const GSM::L3MobileIdentity& wSubscriber,
 		GSM::LogicalChannel* wChannel,
 		unsigned wL3TI,
-		const GSM::L3CMServiceType& wService);
+		const GSM::L3CMServiceType& wService, TransactionEntry * wExistingTransaction);
 //	void addHandoverEntry(HandoverEntry* wHandoverEntry);
 	
 	/** Form for "temporary" transaction to support outgoing handover*/
@@ -202,6 +206,10 @@ class TransactionEntry {
 	char* destRTPIp() { return mSIP.destRTPIp(); }
 	short codec() const { return mSIP.codec(); }
 	TransactionEntry* callingTransaction() { return mOldTransaction; }
+	
+	TransactionEntry* existingTransaction() { return mExistingTransaction; }
+	
+	void cutHandoverTail(GSM::LogicalChannel* wChannel);
 	//@}
 
 
@@ -465,6 +473,7 @@ class TransactionTable {
 	*/
 	TransactionEntry* find(unsigned wID);
 
+	TransactionEntry* findLegacyTransaction(const GSM::L3MobileIdentity& mobileID);
 	/**
 		Find the longest-running non-SOS call.
 		@return NULL if there are no calls or if all are SOS.

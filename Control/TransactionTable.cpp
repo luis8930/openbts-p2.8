@@ -103,7 +103,7 @@ TransactionEntry::TransactionEntry(
 	const L3CallingPartyBCDNumber& wCalling,
 	GSM::CallState wState,
 	const char *wMessage)
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(NULL),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
@@ -129,7 +129,7 @@ TransactionEntry::TransactionEntry(
 	const L3CMServiceType& wService,
 	unsigned wL3TI,
 	const L3CalledPartyBCDNumber& wCalled)
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(NULL),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
@@ -155,7 +155,7 @@ TransactionEntry::TransactionEntry(
 	GSM::LogicalChannel* wChannel,
 	const L3CMServiceType& wService,
 	unsigned wL3TI)
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(NULL),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),mService(wService),
@@ -179,7 +179,7 @@ TransactionEntry::TransactionEntry(
 	GSM::LogicalChannel* wChannel,
 	const L3CalledPartyBCDNumber& wCalled,
 	const char* wMessage)
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(NULL),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),
@@ -203,7 +203,7 @@ TransactionEntry::TransactionEntry(
 	const char* proxy,
 	const L3MobileIdentity& wSubscriber,
 	GSM::LogicalChannel* wChannel)
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(NULL),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mSubscriber(wSubscriber),
@@ -924,9 +924,9 @@ TransactionEntry::TransactionEntry(const char* proxy,
 	const GSM::L3MobileIdentity& wSubscriber,
 	GSM::LogicalChannel* wChannel,
 	unsigned wL3TI,
-	const GSM::L3CMServiceType& wService)
+	const GSM::L3CMServiceType& wService, TransactionEntry * wExistingTransaction)
 
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(wExistingTransaction),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mID(gTransactionTable.newID()),
 	mL3TI(wL3TI),
@@ -948,7 +948,7 @@ TransactionEntry::TransactionEntry(TransactionEntry *wOldTransaction,
 	const GSM::L3MobileIdentity& wSubscriber,
 	string whichBTS,
 	unsigned wL3TI, string wDRTPIp, short wDRTPPort, unsigned wCodec)
-	:mProxyTransaction(false),mHOAllowed(true),
+	:mExistingTransaction(NULL),mProxyTransaction(false),mHOAllowed(true),
 	mAveragedMeasurements(7,MinimalMeasuredValue),
 	mOldTransaction(wOldTransaction),
 	mSubscriber(wSubscriber),
@@ -1066,6 +1066,17 @@ void TransactionEntry::HOSendHandoverCommand(GSM::L3CellDescription wCell,
 }
 
 
+void TransactionEntry::cutHandoverTail(GSM::LogicalChannel* wChannel){
+// remove "proxy" flag
+// send bye to the tail
+	LOG(ERR) << "making transaction \'a normal one\'..";
+	ScopedLock lock(mLock);
+	LOG(ERR) << "making transaction \'a normal one\'....";
+	mProxyTransaction = false;
+	gBTS.handover().removeProxy(this);
+	mChannel = wChannel;
+}
+
 void TransactionTable::init(const char* path)
 	// This assumes the main application uses sdevrandom.
 {
@@ -1130,6 +1141,33 @@ TransactionEntry* TransactionTable::find(unsigned key)
 }
 
 
+TransactionEntry* TransactionTable::findLegacyTransaction(const L3MobileIdentity& mobileID)
+{
+	// Yes, it's linear time.
+	// Since clearDeadEntries is also linear, do that here, too.
+	clearDeadEntries();
+
+	// Brute force search.
+	ScopedLock lock(mLock);
+	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
+		if (itr->second->deadOrRemoved()) continue;
+		if (itr->second->subscriber() != mobileID) continue;
+		if ((itr->second->service() != GSM::L3CMServiceType::HandoverOriginatedCall)&&
+		( (itr->second->service() != GSM::L3CMServiceType::MobileOriginatedCall) && 
+		(itr->second->service() != GSM::L3CMServiceType::MobileTerminatedCall) ))
+			continue;
+		return itr->second;
+	}
+	return NULL;
+}
+
+
+
+
+
+
+
+
 void TransactionTable::innerRemove(TransactionMap::iterator itr)
 {
 	// This should not be called anywhere but from clearDeadEntries.
@@ -1189,30 +1227,7 @@ void TransactionTable::clearDeadEntries()
 
 
 
-/*
-TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
-{
-	LOG(ERR) << "by channel: " << *chan << " (" << chan << ")";
 
-	ScopedLock lock(mLock);
-
-	// Yes, it's linear time.
-	// Since clearDeadEntries is also linear, do that here, too.
-	clearDeadEntries();
-
-	// Brute force search.
-	// This search assumes in order by transaction ID.
-	TransactionEntry *retVal = NULL;
-	for (TransactionMap::iterator itr = mTable.begin(); itr!=mTable.end(); ++itr) {
-		if (itr->second->deadOrRemoved()) continue;
-		const GSM::LogicalChannel* thisChan = itr->second->channel();
-		if ((void*)thisChan != (void*)chan) continue;
-		retVal = itr->second;
-	}
-	//LOG(DEBUG) << "no match for " << *chan << " (" << chan << ")";
-	return retVal;
-}
-*/
 TransactionEntry* TransactionTable::find(const GSM::LogicalChannel *chan)
 {
 	LOG(DEBUG) << "by channel: " << *chan << " (" << chan << ")";
@@ -1325,6 +1340,7 @@ bool TransactionTable::isBusy(const L3MobileIdentity& mobileID)
 		if (itr->second->subscriber() != mobileID) continue;
 		GSM::L3CMServiceType service = itr->second->service();
 		bool speech =
+			service==GSM::L3CMServiceType::HandoverOriginatedCall ||
 			service==GSM::L3CMServiceType::EmergencyCall ||
 			service==GSM::L3CMServiceType::MobileOriginatedCall ||
 			service==GSM::L3CMServiceType::MobileTerminatedCall;
