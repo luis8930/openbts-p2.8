@@ -589,9 +589,9 @@ Handover::Handover(){
 	/* preparing stuff to take decision locally */
 	mBTSDesicion = false;
 	
-	std::vector <unsigned> arfcnseq = gConfig.getVector("GSM.CellSelection.Neighbors");
+	mNeighborArfcns = gConfig.getVector("GSM.CellSelection.Neighbors");
 	
-	mNeighborAddresses.resize(arfcnseq.size());
+	mNeighborAddresses.resize(mNeighborArfcns.size());
 	
 	std::string addr;
 	unsigned arfcn;
@@ -603,8 +603,8 @@ Handover::Handover(){
 	}
 	while(inFile >> arfcn >> addr){
 		std::cout << "looking position for" << arfcn << '\n';
-		for(int i=0;i<arfcnseq.size() && (i<6);i++)
-			if(arfcnseq[i] == arfcn) {
+		for(int i=0;i<mNeighborArfcns.size() && (i<6);i++)
+			if(mNeighborArfcns[i] == arfcn) {
 				mBTSDesicion = true;
 				mNeighborAddresses[i] = addr;
 			}
@@ -612,7 +612,7 @@ Handover::Handover(){
 	inFile.close();
 	
 	for(int i=0;i<mNeighborAddresses.size();i++){
-		LOG(ERR) << "ARFCN=" << arfcnseq[i] << " -> " << mNeighborAddresses[i].c_str();
+		LOG(ERR) << "ARFCN=" << mNeighborArfcns[i] << " -> " << mNeighborAddresses[i].c_str();
 	}
 }
 
@@ -620,7 +620,7 @@ void Handover::BTSDecision(Control::TransactionEntry* transaction, GSM::L3Measur
 //	LOG(ERR) << "handover BTS decision: entry" << wMeasurementResults;
 	if(mBTSDesicion && gConfig.getNum("GSM.Handover.BTS.Enable")) {
 		if(wMeasurementResults.NO_NCELL() == 0) {
-			LOG(ERR) << "handover BTS decision: no useful data: " << wMeasurementResults;
+			LOG(DEBUG) << "handover BTS decision: no useful data: " << wMeasurementResults;
 			return;
 		}
 		
@@ -634,7 +634,7 @@ void Handover::BTSDecision(Control::TransactionEntry* transaction, GSM::L3Measur
 		int max,index,diff;
 		for(int i=0, index=max=0;i<wMeasurementResults.NO_NCELL();i++){
 			diff = averaged[i] - averaged[6];
-			LOG(ERR) << "handover BTS decision: " << transaction->channel() << ", neighbor #" << (i+1) << "/"<< wMeasurementResults.NO_NCELL() << ", delta=" << diff << "dB";
+			LOG(ERR) << transaction->subscriber() << ", neighbor " << mNeighborAddresses[i] << "/"<< mNeighborArfcns[i] << ", delta=" << diff << "dB";
 			if(diff>max) { max = diff, index = i; }
 		}
 		
@@ -985,9 +985,14 @@ bool Handover::performHandover(const GSM::L3MobileIdentity& wSubscriber,
 	// find transaction which serves a call leg
 	Control::TransactionEntry* transaction= gTransactionTable.find(wSubscriber,GSM::Active);
 	if(transaction==NULL) {
-		LOG(ERR) << "handover(CLI): transaction with IMSI not found " << wSubscriber;
+		LOG(ERR) << "request for handover: transaction with IMSI not found " << wSubscriber;
 		return false;
-	} 
+	}
+	
+	if(! (transaction->handoverLock())) {
+		LOG(ERR) << "second handover attempt for transaction: refused";
+		return false;
+	}
 	
 	// fetch key params for handover
 	LOG(ERR) << "\"old\" handover transaction: " << *transaction;

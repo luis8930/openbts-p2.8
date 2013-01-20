@@ -239,6 +239,9 @@ class Handover{
 			
 			/* must follow the order of ARFCNs in GSM.CellSelection.Neighbors */
 			std::vector <std::string> mNeighborAddresses;
+			
+			/* just for reference. and used in constructor to fill mNeighborAddresses*/
+			std::vector <unsigned> mNeighborArfcns;
 		
 };
 

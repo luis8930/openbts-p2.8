@@ -339,6 +339,8 @@ class TransactionEntry {
 	bool handoverAllowed()
 		{ return mHOAllowed; }
 	
+	bool handoverLock();
+	
 	// FIXME: low pass filtering must be implemented
 	vector <int> average(GSM::L3MeasurementResults wMeasurementResults, double wWeights);
 	

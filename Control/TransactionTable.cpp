@@ -496,6 +496,12 @@ void TransactionEntry::channel(GSM::LogicalChannel* wChannel)
 	runQuery(query);
 }
 
+bool TransactionEntry::handoverLock()
+{	ScopedLock lock(mLock);
+	if(! mHOAllowed) return false;
+	mHOAllowed = false; 
+	return true;
+}
 
 GSM::LogicalChannel* TransactionEntry::channel()
 {
@@ -1055,13 +1061,14 @@ SIP::SIPState TransactionEntry::HOCTimeout(){
 // Send Handover Command to move the current call
 void TransactionEntry::HOSendHandoverCommand(GSM::L3CellDescription wCell,
 		GSM::L3ChannelDescription wChan, unsigned wHandoverReference){
-
+/*
 	if(!mHOAllowed) {
 		LOG(ERR) << "handover is not allowed now; handover Command is not sent";
 		return;
 	}
+*/
 	LOG(ERR) << "handover Command, " << wCell << ", " << wChan << ", " << wHandoverReference;
-	mHOAllowed = false;
+//	mHOAllowed = false;
 	mChannel->send(L3HandoverCommand(wCell, wChan, wHandoverReference));
 }
 
